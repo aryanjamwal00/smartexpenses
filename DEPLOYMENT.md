@@ -190,6 +190,25 @@ POST /api/expenses/merchant-rule
 }
 ```
 
+### Manual Entry Portal
+Add expenses manually without bank statements or SMS:
+- Enter merchant name (e.g., "Swiggy", "Amazon")
+- Enter amount
+- Select category (or auto-detect based on merchant)
+- Choose transaction type (Expense/Debit or Refund/Credit)
+- Click "Add Entry"
+
+**API Example:**
+```bash
+POST /api/expenses/manual-entry
+{
+  "merchant": "Swiggy",
+  "amount": "450.00",
+  "category": "Food & Dining",
+  "type": "DEBIT"
+}
+```
+
 ---
 
 ## Next Steps
