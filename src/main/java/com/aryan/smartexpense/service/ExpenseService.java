@@ -148,19 +148,47 @@ public class ExpenseService {
     }
 
     public Map<String, Object> getMonthlyReport(int month, int year) {
-        List<Object[]> results = transactionRepo.getMonthlyExpensesByCategory(month, year);
+        List<Object[]> categoryResults = transactionRepo.getMonthlyExpensesByCategory(month, year);
+        List<Object[]> merchantResults = transactionRepo.getMonthlyExpensesByMerchant(month, year);
+        BigDecimal totalRefunds = transactionRepo.getTotalRefundsForMonth(month, year);
+        List<Object[]> refundDetails = transactionRepo.getRefundDetailsForMonth(month, year);
+
         Map<String, Object> report = new HashMap<>();
 
+        // Category breakdown
         Map<String, Object> categoryBreakdown = new HashMap<>();
-        for (Object[] row : results) {
+        for (Object[] row : categoryResults) {
             String category = (String) row[0];
             Object total = row[1];
             categoryBreakdown.put(category, total);
         }
 
+        // Merchant-wise breakdown
+        List<Map<String, Object>> merchantBreakdown = new ArrayList<>();
+        for (Object[] row : merchantResults) {
+            Map<String, Object> merchantInfo = new HashMap<>();
+            merchantInfo.put("merchant", row[0]);
+            merchantInfo.put("category", row[1]);
+            merchantInfo.put("amount", row[2]);
+            merchantBreakdown.add(merchantInfo);
+        }
+
+        // Refund details
+        List<Map<String, Object>> refundList = new ArrayList<>();
+        for (Object[] row : refundDetails) {
+            Map<String, Object> refundInfo = new HashMap<>();
+            refundInfo.put("merchant", row[0]);
+            refundInfo.put("amount", row[1]);
+            refundInfo.put("date", row[2]);
+            refundList.add(refundInfo);
+        }
+
         report.put("month", month);
         report.put("year", year);
-        report.put("breakdown", categoryBreakdown);
+        report.put("categoryBreakdown", categoryBreakdown);
+        report.put("merchantBreakdown", merchantBreakdown);
+        report.put("totalRefunds", totalRefunds);
+        report.put("refundDetails", refundList);
         return report;
     }
 
@@ -172,7 +200,9 @@ public class ExpenseService {
             Map<String, Object> item = new HashMap<>();
             item.put("year", row[0]);
             item.put("month", row[1]);
-            item.put("total", row[2]);
+            // Handle null or negative values
+            BigDecimal total = row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO;
+            item.put("total", total);
             history.add(item);
         }
         return history;

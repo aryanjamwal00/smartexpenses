@@ -32,8 +32,34 @@
         </div>
         <p id="totalSpend" class="text-3xl font-extrabold text-white mt-2">₹0.00</p>
 
+        <!-- Refund Badge -->
+        <div id="refundBadge" class="hidden mt-2">
+            <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-green-900/30 text-green-400 border border-green-800">
+                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Refunds: ₹<span id="totalRefunds">0.00</span>
+            </span>
+        </div>
+
         <div id="categoryList" class="mt-4 space-y-2 border-t border-slate-800/80 pt-3 text-sm">
             <p class="text-slate-500 text-xs text-center">Loading breakdown...</p>
+        </div>
+    </section>
+
+    <!-- Merchant Breakdown Card -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
+        <h2 class="text-sm font-semibold text-slate-200">Merchant Breakdown</h2>
+        <div id="merchantList" class="space-y-2 text-xs">
+            <p class="text-slate-500 text-center">No merchant data available.</p>
+        </div>
+    </section>
+
+    <!-- Refunds Card -->
+    <section id="refundSection" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
+        <h2 class="text-sm font-semibold text-slate-200">Refunds & Credits</h2>
+        <div id="refundList" class="space-y-2 text-xs">
+            <p class="text-slate-500 text-center">No refunds this month.</p>
         </div>
     </section>
 
@@ -65,17 +91,21 @@
         try {
             const res = await fetch(`/api/expenses/report?month=${activeMonth}&year=${activeYear}`);
             const data = await res.json();
-            const breakdown = data.breakdown || {};
+            const categoryBreakdown = data.categoryBreakdown || {};
+            const merchantBreakdown = data.merchantBreakdown || [];
+            const totalRefunds = data.totalRefunds || 0;
+            const refundDetails = data.refundDetails || [];
 
+            // Category breakdown
             let sum = 0;
             const container = document.getElementById('categoryList');
             container.innerHTML = '';
 
-            const keys = Object.keys(breakdown);
+            const keys = Object.keys(categoryBreakdown);
             if (keys.length === 0) {
                 container.innerHTML = '<p class="text-slate-500 text-xs text-center">No expenses recorded for this month.</p>';
             } else {
-                for (const [category, amount] of Object.entries(breakdown)) {
+                for (const [category, amount] of Object.entries(categoryBreakdown)) {
                     sum += Number(amount);
                     const row = document.createElement('div');
                     row.className = 'flex justify-between items-center text-xs py-1 border-b border-slate-800/50 last:border-0';
@@ -84,6 +114,59 @@
                 }
             }
             document.getElementById('totalSpend').innerText = `₹${sum.toFixed(2)}`;
+
+            // Refund badge
+            const refundBadge = document.getElementById('refundBadge');
+            if (totalRefunds > 0) {
+                refundBadge.classList.remove('hidden');
+                document.getElementById('totalRefunds').innerText = Number(totalRefunds).toFixed(2);
+            } else {
+                refundBadge.classList.add('hidden');
+            }
+
+            // Merchant breakdown
+            const merchantContainer = document.getElementById('merchantList');
+            merchantContainer.innerHTML = '';
+            if (merchantBreakdown.length === 0) {
+                merchantContainer.innerHTML = '<p class="text-slate-500 text-xs text-center">No merchant data available.</p>';
+            } else {
+                merchantBreakdown.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'flex justify-between items-center p-2 rounded-xl bg-slate-950 border border-slate-800/80';
+                    row.innerHTML = `
+                        <div class="flex-1">
+                            <p class="text-slate-300 font-medium">${item.merchant}</p>
+                            <p class="text-slate-500 text-xs">${item.category}</p>
+                        </div>
+                        <span class="font-bold text-slate-100">₹${Number(item.amount).toFixed(2)}</span>
+                    `;
+                    merchantContainer.appendChild(row);
+                });
+            }
+
+            // Refund details
+            const refundSection = document.getElementById('refundSection');
+            const refundList = document.getElementById('refundList');
+            refundList.innerHTML = '';
+            if (refundDetails.length > 0) {
+                refundSection.classList.remove('hidden');
+                refundDetails.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'flex justify-between items-center p-2 rounded-xl bg-green-950/20 border border-green-900/30';
+                    const date = new Date(item.date);
+                    const formattedDate = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                    row.innerHTML = `
+                        <div class="flex-1">
+                            <p class="text-green-400 font-medium">${item.merchant}</p>
+                            <p class="text-green-500/70 text-xs">${formattedDate}</p>
+                        </div>
+                        <span class="font-bold text-green-400">+₹${Number(item.amount).toFixed(2)}</span>
+                    `;
+                    refundList.appendChild(row);
+                });
+            } else {
+                refundSection.classList.add('hidden');
+            }
         } catch (err) {
             console.error(err);
         }

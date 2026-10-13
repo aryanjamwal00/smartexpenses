@@ -89,4 +89,25 @@ public class ExpenseController {
         expenseService.resetMonthlyExpenses(month, year);
         return ResponseEntity.ok(Map.of("message", "Monthly expenses reset successfully."));
     }
+
+    @PostMapping("/merchant-rule")
+    public ResponseEntity<?> addMerchantRule(@RequestBody Map<String, String> payload) {
+        String keyword = payload.get("keyword");
+        String category = payload.get("category");
+
+        if (keyword == null || keyword.isBlank() || category == null || category.isBlank()) {
+            return ResponseEntity.badRequest().body("Keyword and category are required.");
+        }
+
+        try {
+            var rule = expenseService.addRule(keyword, category);
+            return ResponseEntity.ok(Map.of(
+                "message", "Merchant rule added successfully",
+                "keyword", rule.getKeyword(),
+                "category", rule.getCategory().getName()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to add rule: " + e.getMessage());
+        }
+    }
 }

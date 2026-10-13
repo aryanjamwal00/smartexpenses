@@ -30,9 +30,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("year") int year
     );
 
-    // Fetch all distinct months and years with their total spends
-    @Query("SELECT YEAR(t.transactionDate), MONTH(t.transactionDate), SUM(t.amount) " +
-            "FROM Transaction t WHERE t.type = 'DEBIT' " +
+    // Fetch all distinct months and years with their total spends (net after refunds)
+    @Query("SELECT YEAR(t.transactionDate), MONTH(t.transactionDate), " +
+            "SUM(CASE WHEN t.type = 'DEBIT' THEN t.amount ELSE -t.amount END) " +
+            "FROM Transaction t " +
             "GROUP BY YEAR(t.transactionDate), MONTH(t.transactionDate) " +
             "ORDER BY YEAR(t.transactionDate) DESC, MONTH(t.transactionDate) DESC")
     List<Object[]> getHistoricalMonthlySummaries();
@@ -41,4 +42,22 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Modifying
     @Query("DELETE FROM Transaction t WHERE MONTH(t.transactionDate) = :month AND YEAR(t.transactionDate) = :year")
     void deleteExpensesByMonthAndYear(@Param("month") int month, @Param("year") int year);
+
+    // Get merchant-wise breakdown for a month
+    @Query("SELECT t.merchant, t.category.name, SUM(t.amount) FROM Transaction t " +
+            "WHERE t.type = 'DEBIT' AND MONTH(t.transactionDate) = :month AND YEAR(t.transactionDate) = :year " +
+            "GROUP BY t.merchant, t.category.name " +
+            "ORDER BY SUM(t.amount) DESC")
+    List<Object[]> getMonthlyExpensesByMerchant(@Param("month") int month, @Param("year") int year);
+
+    // Get refund amounts for a month
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+            "WHERE t.type = 'CREDIT' AND MONTH(t.transactionDate) = :month AND YEAR(t.transactionDate) = :year")
+    BigDecimal getTotalRefundsForMonth(@Param("month") int month, @Param("year") int year);
+
+    // Get refund details for a month
+    @Query("SELECT t.merchant, t.amount, t.transactionDate FROM Transaction t " +
+            "WHERE t.type = 'CREDIT' AND MONTH(t.transactionDate) = :month AND YEAR(t.transactionDate) = :year " +
+            "ORDER BY t.transactionDate DESC")
+    List<Object[]> getRefundDetailsForMonth(@Param("month") int month, @Param("year") int year);
 }
