@@ -2,8 +2,11 @@ package com.aryan.smartexpense
 
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 data class ParseSmsRequest(
     val message: String
@@ -39,6 +42,29 @@ interface ApiService {
     suspend fun getReport(
         @Query("month") month: Int,
         @Query("year") year: Int,
+        @Header("Authorization") token: String
+    ): Response<Map<String, Any>>
+
+    @GET("/api/expenses/history")
+    suspend fun getHistory(
+        @Header("Authorization") token: String
+    ): Response<List<Map<String, Any>>>
+
+    @GET("/api/expenses/categories")
+    suspend fun getCategories(
+        @Header("Authorization") token: String
+    ): Response<List<Map<String, Any>>>
+
+    @DELETE("/api/expenses/reset")
+    suspend fun resetMonth(
+        @Query("month") month: Int,
+        @Query("year") year: Int,
+        @Header("Authorization") token: String
+    ): Response<Void>
+
+    @POST("/api/expenses/manual-entry")
+    suspend fun addManualEntry(
+        @Body entry: Map<String, Any>,
         @Header("Authorization") token: String
     ): Response<Map<String, Any>>
 }
