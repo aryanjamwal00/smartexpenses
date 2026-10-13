@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: smartexpense
+    runtime: docker
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8080
+    # Render will automatically provide DATABASE_URL when you add a PostgreSQL database
+    # Add the database resource below to link it
+
+databases:
+  - name: smartexpense-db
+    databaseName: smartexpense
+    user: smartexpense
+    plan: free

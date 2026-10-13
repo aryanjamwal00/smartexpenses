@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Smart Expense</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 flex flex-col items-center">
+
+<div class="w-full max-w-md space-y-4">
+    <!-- Header -->
+    <header class="flex justify-between items-center py-2 border-b border-slate-800">
+        <div>
+            <h1 class="text-xl font-bold tracking-tight text-white">SmartExpense</h1>
+            <p class="text-xs text-slate-400">Automated Expense Engine</p>
+        </div>
+        <button onclick="fetchAllData()" class="bg-slate-800 hover:bg-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700">
+            Refresh
+        </button>
+    </header>
+
+    <!-- Monthly Summary Card -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm relative">
+        <div class="flex justify-between items-center">
+            <span class="text-xs font-medium text-slate-400">Total Spent (Active Month)</span>
+            <button onclick="confirmReset()" class="text-red-400 hover:text-red-300 text-xs font-medium">
+                Reset Month
+            </button>
+        </div>
+        <p id="totalSpend" class="text-3xl font-extrabold text-white mt-2">₹0.00</p>
+
+        <div id="categoryList" class="mt-4 space-y-2 border-t border-slate-800/80 pt-3 text-sm">
+            <p class="text-slate-500 text-xs text-center">Loading breakdown...</p>
+        </div>
+    </section>
+
+    <!-- Historical Monthly Records -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
+        <h2 class="text-sm font-semibold text-slate-200">Monthly Expense History</h2>
+        <div id="historyList" class="space-y-2 text-xs">
+            <p class="text-slate-500 text-center">No past records available.</p>
+        </div>
+    </section>
+
+    <!-- Upload Statement Card -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
+        <h2 class="text-sm font-semibold text-slate-200">Import Bank Statement</h2>
+        <input type="file" id="statementFile" accept=".pdf,.csv" class="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-600/20 file:text-blue-400 hover:file:bg-blue-600/30">
+        <input type="password" id="statementPassword" placeholder="PDF Password (if required)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <button onclick="uploadStatement()" class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[0.98] transition font-medium text-xs py-2.5 rounded-xl text-slate-100">
+            Upload & Process
+        </button>
+    </section>
+</div>
+
+<script>
+    const currentDate = new Date();
+    const activeMonth = currentDate.getMonth() + 1;
+    const activeYear = currentDate.getFullYear();
+
+    async function fetchReport() {
+        try {
+            const res = await fetch(`/api/expenses/report?month=${activeMonth}&year=${activeYear}`);
+            const data = await res.json();
+            const breakdown = data.breakdown || {};
+
+            let sum = 0;
+            const container = document.getElementById('categoryList');
+            container.innerHTML = '';
+
+            const keys = Object.keys(breakdown);
+            if (keys.length === 0) {
+                container.innerHTML = '<p class="text-slate-500 text-xs text-center">No expenses recorded for this month.</p>';
+            } else {
+                for (const [category, amount] of Object.entries(breakdown)) {
+                    sum += Number(amount);
+                    const row = document.createElement('div');
+                    row.className = 'flex justify-between items-center text-xs py-1 border-b border-slate-800/50 last:border-0';
+                    row.innerHTML = `<span class="text-slate-300">${category}</span><span class="font-semibold text-slate-100">₹${Number(amount).toFixed(2)}</span>`;
+                    container.appendChild(row);
+                }
+            }
+            document.getElementById('totalSpend').innerText = `₹${sum.toFixed(2)}`;
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function fetchHistory() {
+        try {
+            const res = await fetch('/api/expenses/history');
+            const history = await res.json();
+            const container = document.getElementById('historyList');
+            container.innerHTML = '';
+
+            if (!history || history.length === 0) {
+                container.innerHTML = '<p class="text-slate-500 text-center">No past records available.</p>';
+                return;
+            }
+
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            history.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'flex justify-between items-center p-2 rounded-xl bg-slate-950 border border-slate-800/80';
+                const label = `${monthNames[item.month - 1]} ${item.year}`;
+                row.innerHTML = `<span class="text-slate-300 font-medium">${label}</span><span class="font-bold text-slate-100">₹${Number(item.total).toFixed(2)}</span>`;
+                container.appendChild(row);
+            });
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function confirmReset() {
+        if (!confirm(`Are you sure you want to reset expenses for Month ${activeMonth}/${activeYear}? This cannot be undone.`)) {
+            return;
+        }
+        try {
+            const res = await fetch(`/api/expenses/reset?month=${activeMonth}&year=${activeYear}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                alert('Current month expenses have been reset.');
+                fetchAllData();
+            } else {
+                alert('Failed to reset expenses.');
+            }
+        } catch (err) {
+            alert('Error resetting month: ' + err.message);
+        }
+    }
+
+    async function uploadStatement() {
+        const fileInput = document.getElementById('statementFile');
+        const password = document.getElementById('statementPassword').value;
+        if (!fileInput.files[0]) {
+            alert('Please choose a file first.');
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        let url = '/api/expenses/upload-csv';
+        if (file.name.toLowerCase().endsWith('.pdf')) {
+            url = '/api/expenses/upload-pdf';
+            if (password) formData.append('password', password);
+        }
+
+        try {
+            const res = await fetch(url, { method: 'POST', body: formData });
+            const result = await res.json();
+            if (res.ok) {
+                alert(`Import complete! Inserted: ${result.inserted}, Skipped duplicates: ${result.duplicatesSkipped}`);
+                fetchAllData();
+            } else {
+                alert('Upload failed: ' + (result.message || res.statusText));
+            }
+        } catch (e) {
+            alert('Error uploading statement: ' + e.message);
+        }
+    }
+
+    function fetchAllData() {
+        fetchReport();
+        fetchHistory();
+    }
+
+    fetchAllData();
+</script>
+</body>
+</html>
