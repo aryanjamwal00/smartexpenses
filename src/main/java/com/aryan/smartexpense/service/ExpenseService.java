@@ -5,6 +5,7 @@ import com.aryan.smartexpense.dto.ExpenseResponseDto;
 import com.aryan.smartexpense.model.Category;
 import com.aryan.smartexpense.model.MerchantRule;
 import com.aryan.smartexpense.model.Transaction;
+import com.aryan.smartexpense.model.TransactionType;
 import com.aryan.smartexpense.model.User;
 import com.aryan.smartexpense.parser.BankSmsParserService;
 import com.aryan.smartexpense.repository.CategoryRepository;
