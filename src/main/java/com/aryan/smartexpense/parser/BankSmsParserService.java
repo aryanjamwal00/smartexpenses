@@ -20,9 +20,15 @@ public class BankSmsParserService {
             Pattern.CASE_INSENSITIVE
     );
 
-    // Regex to capture common merchant keywords following 'to' or 'at'
+    // Regex to capture merchant names - improved patterns for various SMS formats
     private static final Pattern MERCHANT_PATTERN = Pattern.compile(
-            "(?:to|at|vpa)\\s+([a-zA-Z0-9@._-]+)",
+            "(?:to|at|vpa|@|with)\\s*([a-zA-Z0-9@._\\s-]+?)(?:\\s*(?:on|for|via|using|at|rs|inr|\\d|\\(|$))",
+            Pattern.CASE_INSENSITIVE
+    );
+
+    // Additional pattern for UPI handles and merchant names
+    private static final Pattern UPI_PATTERN = Pattern.compile(
+            "([a-zA-Z0-9.-]+@[a-zA-Z0-9.-]+)",
             Pattern.CASE_INSENSITIVE
     );
 
@@ -60,9 +66,37 @@ public class BankSmsParserService {
 
         // 3. Extract Merchant Name
         String merchant = "UNKNOWN";
-        Matcher merchantMatcher = MERCHANT_PATTERN.matcher(cleanSms);
-        if (merchantMatcher.find()) {
-            merchant = merchantMatcher.group(1).toUpperCase(Locale.ROOT);
+
+        // Try UPI pattern first (e.g., swiggy@ybl, amazon@axisbank)
+        Matcher upiMatcher = UPI_PATTERN.matcher(cleanSms);
+        if (upiMatcher.find()) {
+            String upiHandle = upiMatcher.group(1).toUpperCase(Locale.ROOT);
+            // Extract merchant name before @
+            merchant = upiHandle.split("@")[0].replace(".", " ").trim();
+        } else {
+            // Try merchant pattern (to/at/with merchant)
+            Matcher merchantMatcher = MERCHANT_PATTERN.matcher(cleanSms);
+            if (merchantMatcher.find()) {
+                merchant = merchantMatcher.group(1).toUpperCase(Locale.ROOT).trim();
+            }
+        }
+
+        // Clean up merchant name
+        merchant = merchant.replaceAll("[@._-]", " ").replaceAll("\\s+", " ").trim();
+
+        // If still unknown, try to find common merchant keywords in the SMS
+        if (merchant.equals("UNKNOWN")) {
+            String[] commonMerchants = {
+                "SWIGGY", "ZOMATO", "BLINKIT", "ZEPTO", "AMAZON", "FLIPKART",
+                "UBER", "OLA", "RAPIDO", "NETFLIX", "SPOTIFY", "PAYTM", "PHONEPE",
+                "GPAY", "BIGBASKET", "DUNZO", "MYNTRA", "AJIO", "NYKAA"
+            };
+            for (String m : commonMerchants) {
+                if (cleanSms.toUpperCase(Locale.ROOT).contains(m)) {
+                    merchant = m;
+                    break;
+                }
+            }
         }
 
         // 4. Generate Idempotency/Deduplication Hash (SHA-256)
