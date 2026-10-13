@@ -144,6 +144,20 @@ public class ExpenseController {
         }
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser() {
+        try {
+            var userDetails = (com.aryan.smartexpense.security.CustomUserDetails)
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            return ResponseEntity.ok(Map.of(
+                "email", userDetails.getUsername(),
+                "userId", userDetails.getUserId()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body("Not authenticated");
+        }
+    }
+
     @GetMapping("/categories")
     public ResponseEntity<?> getCategories() {
         return ResponseEntity.ok(expenseService.getAllCategories());

@@ -5,10 +5,14 @@ import com.aryan.smartexpense.dto.ExpenseResponseDto;
 import com.aryan.smartexpense.model.Category;
 import com.aryan.smartexpense.model.MerchantRule;
 import com.aryan.smartexpense.model.Transaction;
+import com.aryan.smartexpense.model.User;
 import com.aryan.smartexpense.parser.BankSmsParserService;
 import com.aryan.smartexpense.repository.CategoryRepository;
 import com.aryan.smartexpense.repository.MerchantRuleRepository;
 import com.aryan.smartexpense.repository.TransactionRepository;
+import com.aryan.smartexpense.repository.UserRepository;
+import com.aryan.smartexpense.security.CustomUserDetails;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +25,7 @@ public class ExpenseService {
 
     @Transactional
     public Map<String, Object> processCsvBatch(List<CsvStatementParserService.CsvTransactionRow> rows) {
+        User currentUser = getCurrentUser();
         int inserted = 0;
         int duplicates = 0;
 
@@ -37,6 +42,7 @@ public class ExpenseService {
                     row.type,
                     row.description,
                     category,
+                    currentUser,
                     LocalDateTime.now(),
                     "STATEMENT_IMPORT: " + row.description
             );
@@ -55,19 +61,28 @@ public class ExpenseService {
     private final CategoryRepository categoryRepo;
     private final MerchantRuleRepository ruleRepo;
     private final BankSmsParserService parserService;
+    private final UserRepository userRepo;
 
     public ExpenseService(TransactionRepository transactionRepo,
                           CategoryRepository categoryRepo,
                           MerchantRuleRepository ruleRepo,
-                          BankSmsParserService parserService) {
+                          BankSmsParserService parserService,
+                          UserRepository userRepo) {
         this.transactionRepo = transactionRepo;
         this.categoryRepo = categoryRepo;
         this.ruleRepo = ruleRepo;
         this.parserService = parserService;
+        this.userRepo = userRepo;
+    }
+
+    private User getCurrentUser() {
+        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return userRepo.findById(userDetails.getUserId()).orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     @Transactional
     public ExpenseResponseDto processSms(String rawSms) {
+        User currentUser = getCurrentUser();
         BankSmsParserService.ParsedData data = parserService.parse(rawSms);
 
         if (transactionRepo.findByTxnHash(data.hash).isPresent()) {
@@ -83,6 +98,7 @@ public class ExpenseService {
                 data.type,
                 data.merchant,
                 assignedCategory,
+                currentUser,
                 now,
                 rawSms
         );
@@ -91,6 +107,7 @@ public class ExpenseService {
 
         // Budget check logic
         BigDecimal totalSpent = transactionRepo.getTotalSpentByCategoryAndMonth(
+                currentUser,
                 assignedCategory,
                 now.getMonthValue(),
                 now.getYear()
@@ -148,10 +165,11 @@ public class ExpenseService {
     }
 
     public Map<String, Object> getMonthlyReport(int month, int year) {
-        List<Object[]> categoryResults = transactionRepo.getMonthlyExpensesByCategory(month, year);
-        List<Object[]> merchantResults = transactionRepo.getMonthlyExpensesByMerchant(month, year);
-        BigDecimal totalRefunds = transactionRepo.getTotalRefundsForMonth(month, year);
-        List<Object[]> refundDetails = transactionRepo.getRefundDetailsForMonth(month, year);
+        User currentUser = getCurrentUser();
+        List<Object[]> categoryResults = transactionRepo.getMonthlyExpensesByCategory(currentUser, month, year);
+        List<Object[]> merchantResults = transactionRepo.getMonthlyExpensesByMerchant(currentUser, month, year);
+        BigDecimal totalRefunds = transactionRepo.getTotalRefundsForMonth(currentUser, month, year);
+        List<Object[]> refundDetails = transactionRepo.getRefundDetailsForMonth(currentUser, month, year);
 
         Map<String, Object> report = new HashMap<>();
 
@@ -193,7 +211,8 @@ public class ExpenseService {
     }
 
     public List<Map<String, Object>> getHistoricalReports() {
-        List<Object[]> records = transactionRepo.getHistoricalMonthlySummaries();
+        User currentUser = getCurrentUser();
+        List<Object[]> records = transactionRepo.getHistoricalMonthlySummaries(currentUser);
         List<Map<String, Object>> history = new ArrayList<>();
 
         for (Object[] row : records) {
@@ -210,11 +229,13 @@ public class ExpenseService {
 
     @Transactional
     public void resetMonthlyExpenses(int month, int year) {
-        transactionRepo.deleteExpensesByMonthAndYear(month, year);
+        User currentUser = getCurrentUser();
+        transactionRepo.deleteExpensesByMonthAndYear(currentUser, month, year);
     }
 
     @Transactional
     public Map<String, Object> addManualEntry(String merchant, BigDecimal amount, TransactionType type, String categoryName) {
+        User currentUser = getCurrentUser();
         // Generate hash for deduplication
         String rawIdentity = merchant + "_" + amount + "_" + type + "_MANUAL_" + System.currentTimeMillis();
         String hash = generateSha256(rawIdentity);
@@ -240,6 +261,7 @@ public class ExpenseService {
                 type,
                 merchant,
                 category,
+                currentUser,
                 LocalDateTime.now(),
                 "MANUAL_ENTRY"
         );

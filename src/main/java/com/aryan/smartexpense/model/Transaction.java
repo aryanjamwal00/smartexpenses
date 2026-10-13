@@ -30,6 +30,10 @@ public class Transaction {
     @JoinColumn(name = "category_id")
     private Category category;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
     @Column(nullable = false)
     private LocalDateTime transactionDate;
 
@@ -39,12 +43,13 @@ public class Transaction {
     public Transaction() {}
 
     public Transaction(String txnHash, BigDecimal amount, TransactionType type,
-                       String merchant, Category category, LocalDateTime transactionDate, String rawMessage) {
+                       String merchant, Category category, User user, LocalDateTime transactionDate, String rawMessage) {
         this.txnHash = txnHash;
         this.amount = amount;
         this.type = type;
         this.merchant = merchant;
         this.category = category;
+        this.user = user;
         this.transactionDate = transactionDate;
         this.rawMessage = rawMessage;
     }
@@ -70,6 +75,12 @@ public class Transaction {
     }
     public void setCategory(Category category) {
         this.category = category;
+    }
+    public User getUser() {
+        return user;
+    }
+    public void setUser(User user) {
+        this.user = user;
     }
     public LocalDateTime getTransactionDate() {
         return transactionDate;
