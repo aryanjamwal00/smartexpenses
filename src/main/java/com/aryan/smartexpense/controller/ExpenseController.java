@@ -110,4 +110,42 @@ public class ExpenseController {
             return ResponseEntity.badRequest().body("Failed to add rule: " + e.getMessage());
         }
     }
+
+    @PostMapping("/manual-entry")
+    public ResponseEntity<?> addManualEntry(@RequestBody Map<String, Object> payload) {
+        try {
+            String merchant = (String) payload.get("merchant");
+            String amountStr = (String) payload.get("amount");
+            String typeStr = (String) payload.get("type");
+            String category = (String) payload.get("category");
+
+            if (merchant == null || merchant.isBlank()) {
+                return ResponseEntity.badRequest().body("Merchant name is required.");
+            }
+            if (amountStr == null || amountStr.isBlank()) {
+                return ResponseEntity.badRequest().body("Amount is required.");
+            }
+            if (typeStr == null || typeStr.isBlank()) {
+                return ResponseEntity.badRequest().body("Transaction type is required.");
+            }
+
+            java.math.BigDecimal amount = new java.math.BigDecimal(amountStr);
+            com.aryan.smartexpense.model.TransactionType type =
+                com.aryan.smartexpense.model.TransactionType.valueOf(typeStr.toUpperCase());
+
+            var result = expenseService.addManualEntry(merchant, amount, type, category);
+            return ResponseEntity.ok(result);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body("Invalid amount format.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Invalid transaction type. Use DEBIT or CREDIT.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to add entry: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<?> getCategories() {
+        return ResponseEntity.ok(expenseService.getAllCategories());
+    }
 }

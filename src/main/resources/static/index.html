@@ -80,6 +80,23 @@
             Upload & Process
         </button>
     </section>
+
+    <!-- Manual Entry Card -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
+        <h2 class="text-sm font-semibold text-slate-200">Manual Entry</h2>
+        <input type="text" id="manualMerchant" placeholder="Merchant name (e.g., Swiggy, Amazon)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <input type="number" id="manualAmount" placeholder="Amount (₹)" step="0.01" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <select id="manualCategory" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <option value="">Auto-detect category</option>
+        </select>
+        <select id="manualType" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <option value="DEBIT">Expense (Debit)</option>
+            <option value="CREDIT">Refund/Income (Credit)</option>
+        </select>
+        <button onclick="addManualEntry()" class="w-full bg-green-600 hover:bg-green-500 active:scale-[0.98] transition font-medium text-xs py-2.5 rounded-xl text-slate-100">
+            Add Entry
+        </button>
+    </section>
 </div>
 
 <script>
@@ -251,6 +268,64 @@
     function fetchAllData() {
         fetchReport();
         fetchHistory();
+        fetchCategories();
+    }
+
+    async function fetchCategories() {
+        try {
+            const res = await fetch('/api/expenses/categories');
+            const categories = await res.json();
+            const select = document.getElementById('manualCategory');
+            select.innerHTML = '<option value="">Auto-detect category</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.name;
+                option.textContent = cat.name;
+                select.appendChild(option);
+            });
+        } catch (err) {
+            console.error('Failed to load categories:', err);
+        }
+    }
+
+    async function addManualEntry() {
+        const merchant = document.getElementById('manualMerchant').value;
+        const amount = document.getElementById('manualAmount').value;
+        const category = document.getElementById('manualCategory').value;
+        const type = document.getElementById('manualType').value;
+
+        if (!merchant || !amount) {
+            alert('Please enter merchant name and amount.');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/expenses/manual-entry', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    merchant: merchant,
+                    amount: amount,
+                    category: category || null,
+                    type: type
+                })
+            });
+            const result = await res.json();
+            if (res.ok) {
+                alert(`Entry added: ${result.merchant} - ₹${result.amount} (${result.category})`);
+                // Clear form
+                document.getElementById('manualMerchant').value = '';
+                document.getElementById('manualAmount').value = '';
+                document.getElementById('manualCategory').value = '';
+                fetchAllData();
+            } else {
+                alert('Failed to add entry: ' + (result.message || res.statusText));
+            }
+        } catch (e) {
+            alert('Error adding entry: ' + e.message);
+        }
     }
 
     fetchAllData();

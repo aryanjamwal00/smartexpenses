@@ -212,4 +212,73 @@ public class ExpenseService {
     public void resetMonthlyExpenses(int month, int year) {
         transactionRepo.deleteExpensesByMonthAndYear(month, year);
     }
+
+    @Transactional
+    public Map<String, Object> addManualEntry(String merchant, BigDecimal amount, TransactionType type, String categoryName) {
+        // Generate hash for deduplication
+        String rawIdentity = merchant + "_" + amount + "_" + type + "_MANUAL_" + System.currentTimeMillis();
+        String hash = generateSha256(rawIdentity);
+
+        // Check for duplicates
+        if (transactionRepo.findByTxnHash(hash).isPresent()) {
+            throw new IllegalArgumentException("Duplicate transaction detected.");
+        }
+
+        // Resolve category
+        Category category;
+        if (categoryName != null && !categoryName.isBlank()) {
+            category = categoryRepo.findByNameIgnoreCase(categoryName)
+                    .orElseGet(() -> categoryRepo.save(new Category(categoryName, BigDecimal.ZERO)));
+        } else {
+            category = resolveCategoryForMerchant(merchant);
+        }
+
+        // Create transaction
+        Transaction transaction = new Transaction(
+                hash,
+                amount,
+                type,
+                merchant,
+                category,
+                LocalDateTime.now(),
+                "MANUAL_ENTRY"
+        );
+
+        transactionRepo.save(transaction);
+
+        return Map.of(
+                "message", "Manual entry added successfully",
+                "merchant", merchant,
+                "amount", amount,
+                "type", type.toString(),
+                "category", category.getName()
+        );
+    }
+
+    public List<Map<String, Object>> getAllCategories() {
+        List<Category> categories = categoryRepo.findAll();
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Category cat : categories) {
+            Map<String, Object> catData = new HashMap<>();
+            catData.put("id", cat.getId());
+            catData.put("name", cat.getName());
+            catData.put("monthlyBudget", cat.getMonthlyBudget());
+            result.add(catData);
+        }
+        return result;
+    }
+
+    private String generateSha256(String input) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = digest.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hashBytes) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Error computing hash", e);
+        }
+    }
 }
