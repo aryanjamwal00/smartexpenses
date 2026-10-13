@@ -36,6 +36,7 @@
     <div id="signupForm" class="space-y-3 hidden">
         <input type="text" id="signupName" placeholder="Your Name" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
         <input type="email" id="signupEmail" placeholder="Email" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <input type="tel" id="signupPhone" placeholder="Phone Number (for SMS auto-import)" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
         <input type="password" id="signupPassword" placeholder="Password" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
         <button onclick="signup()" class="w-full bg-green-600 hover:bg-green-500 active:scale-[0.98] transition font-medium text-sm py-3 rounded-xl text-slate-100">
             Create Account
@@ -212,11 +213,12 @@
     async function signup() {
         const name = document.getElementById('signupName').value;
         const email = document.getElementById('signupEmail').value;
+        const phone = document.getElementById('signupPhone').value;
         const password = document.getElementById('signupPassword').value;
         const errorEl = document.getElementById('authError');
 
         if (!name || !email || !password) {
-            errorEl.textContent = 'Please fill all fields';
+            errorEl.textContent = 'Please fill all required fields';
             errorEl.classList.remove('hidden');
             return;
         }
@@ -225,13 +227,13 @@
             const res = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password })
+                body: JSON.stringify({ name, email, phoneNumber: phone, password })
             });
             const data = await res.json();
 
             if (res.ok) {
                 authToken = data.token;
-                currentUser = { email: data.email, userId: data.userId, name: data.name };
+                currentUser = { email: data.email, userId: data.userId, name: data.name, phoneNumber: data.phoneNumber };
                 localStorage.setItem('authToken', authToken);
                 localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 showDashboard();

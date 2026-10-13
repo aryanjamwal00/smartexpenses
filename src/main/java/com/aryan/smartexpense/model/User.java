@@ -25,9 +25,19 @@ public class User {
     @Column(nullable = false)
     private String name;
 
+    @Column(unique = true)
+    private String phoneNumber; // For SMS webhook identification
+
     public User(String email, String password, String name) {
         this.email = email;
         this.password = password;
         this.name = name;
+    }
+
+    public User(String email, String password, String name, String phoneNumber) {
+        this.email = email;
+        this.password = password;
+        this.name = name;
+        this.phoneNumber = phoneNumber;
     }
 }

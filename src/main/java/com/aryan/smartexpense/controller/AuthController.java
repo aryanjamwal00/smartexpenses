@@ -22,12 +22,13 @@ public class AuthController {
             String email = payload.get("email");
             String password = payload.get("password");
             String name = payload.get("name");
+            String phoneNumber = payload.get("phoneNumber");
 
             if (email == null || email.isBlank() || password == null || password.isBlank() || name == null || name.isBlank()) {
                 return ResponseEntity.badRequest().body("Email, password, and name are required");
             }
 
-            Map<String, Object> result = authService.register(email, password, name);
+            Map<String, Object> result = authService.register(email, password, name, phoneNumber);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

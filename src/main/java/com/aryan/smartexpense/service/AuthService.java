@@ -23,13 +23,22 @@ public class AuthService {
         this.jwtUtil = jwtUtil;
     }
 
-    public Map<String, Object> register(String email, String password, String name) {
+    public Map<String, Object> register(String email, String password, String name, String phoneNumber) {
         if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email already registered");
         }
 
+        if (phoneNumber != null && !phoneNumber.isBlank() && userRepository.existsByPhoneNumber(phoneNumber)) {
+            throw new IllegalArgumentException("Phone number already registered");
+        }
+
         String encodedPassword = passwordEncoder.encode(password);
-        User user = new User(email, encodedPassword, name);
+        User user;
+        if (phoneNumber != null && !phoneNumber.isBlank()) {
+            user = new User(email, encodedPassword, name, phoneNumber);
+        } else {
+            user = new User(email, encodedPassword, name);
+        }
         user = userRepository.save(user);
 
         String token = jwtUtil.generateToken(email, user.getId());
@@ -39,6 +48,7 @@ public class AuthService {
         response.put("userId", user.getId());
         response.put("email", user.getEmail());
         response.put("name", user.getName());
+        response.put("phoneNumber", user.getPhoneNumber());
         return response;
     }
 

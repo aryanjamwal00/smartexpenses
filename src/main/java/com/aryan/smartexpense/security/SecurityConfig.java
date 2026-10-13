@@ -33,6 +33,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/expenses/sms-webhook").permitAll() // Public webhook for SMS forwarding
                 .requestMatchers("/", "/index.html", "/manifest.json", "/sw.js", "/h2-console/**").permitAll()
                 .requestMatchers("/api/expenses/**").authenticated()
                 .anyRequest().authenticated()

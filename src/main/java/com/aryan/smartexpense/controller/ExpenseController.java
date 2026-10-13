@@ -3,11 +3,14 @@ package com.aryan.smartexpense.controller;
 import com.aryan.smartexpense.parser.CsvStatementParserService;
 import com.aryan.smartexpense.parser.PdfStatementParserService;
 import com.aryan.smartexpense.service.ExpenseService;
+import com.aryan.smartexpense.repository.UserRepository;
+import com.aryan.smartexpense.model.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/expenses")
@@ -16,14 +19,17 @@ public class ExpenseController {
     private final ExpenseService expenseService;
     private final PdfStatementParserService pdfParserService;
     private final CsvStatementParserService csvParserService;
+    private final UserRepository userRepo;
 
     // Inject all services via constructor
     public ExpenseController(ExpenseService expenseService,
                              PdfStatementParserService pdfParserService,
-                             CsvStatementParserService csvParserService) {
+                             CsvStatementParserService csvParserService,
+                             UserRepository userRepo) {
         this.expenseService = expenseService;
         this.pdfParserService = pdfParserService;
         this.csvParserService = csvParserService;
+        this.userRepo = userRepo;
     }
 
     @PostMapping(value = "/upload-pdf", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -161,5 +167,101 @@ public class ExpenseController {
     @GetMapping("/categories")
     public ResponseEntity<?> getCategories() {
         return ResponseEntity.ok(expenseService.getAllCategories());
+    }
+
+    // Webhook endpoint for SMS forwarding services (Twilio, Plivo, etc.)
+    @PostMapping("/sms-webhook")
+    public ResponseEntity<?> handleSmsWebhook(
+            @RequestHeader(value = "X-Webhook-Secret", required = false) String webhookSecret,
+            @RequestBody Map<String, Object> payload) {
+        try {
+            // Verify webhook secret (optional but recommended for security)
+            String expectedSecret = System.getenv("WEBHOOK_SECRET");
+            if (expectedSecret != null && !expectedSecret.isEmpty() && !expectedSecret.equals(webhookSecret)) {
+                return ResponseEntity.status(401).body("Invalid webhook secret");
+            }
+
+            // Support multiple SMS forwarding service formats
+            String smsText = extractSmsText(payload);
+            String sender = extractSender(payload);
+
+            if (smsText == null || smsText.isBlank()) {
+                return ResponseEntity.badRequest().body("No SMS text found in payload");
+            }
+
+            // Find user by phone number (if provided in payload or use sender)
+            String phoneNumber = extractPhoneNumber(payload);
+            if (phoneNumber == null || phoneNumber.isBlank()) {
+                phoneNumber = sender; // Use sender as phone number
+            }
+
+            // Clean phone number (remove +, spaces, dashes)
+            if (phoneNumber != null) {
+                phoneNumber = phoneNumber.replaceAll("[^0-9]", "");
+            }
+
+            User user = null;
+            if (phoneNumber != null && !phoneNumber.isBlank()) {
+                Optional<User> userOpt = userRepo.findByPhoneNumber(phoneNumber);
+                if (userOpt.isPresent()) {
+                    user = userOpt.get();
+                }
+            }
+
+            // If no user found, return error
+            if (user == null) {
+                return ResponseEntity.status(404).body("No user found for phone number: " + phoneNumber);
+            }
+
+            // Process the SMS with user context
+            var result = expenseService.processSmsForUser(smsText, user);
+
+            return ResponseEntity.ok(Map.of(
+                "status", "processed",
+                "message", "SMS processed successfully",
+                "data", result
+            ));
+        } catch (IllegalArgumentException e) {
+            // Duplicate transaction - return success to prevent webhook retries
+            return ResponseEntity.ok(Map.of(
+                "status", "duplicate",
+                "message", e.getMessage()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to process SMS: " + e.getMessage());
+        }
+    }
+
+    private String extractPhoneNumber(Map<String, Object> payload) {
+        // Try common phone number field names
+        String[] fields = {"phone", "phoneNumber", "phone_number", "To", "to", "recipient"};
+        for (String field : fields) {
+            if (payload.containsKey(field) && payload.get(field) != null) {
+                return payload.get(field).toString();
+            }
+        }
+        return null;
+    }
+
+    private String extractSmsText(Map<String, Object> payload) {
+        // Try common field names from different SMS services
+        String[] fields = {"Body", "body", "text", "message", "content", "sms", "Message"};
+        for (String field : fields) {
+            if (payload.containsKey(field) && payload.get(field) != null) {
+                return payload.get(field).toString();
+            }
+        }
+        return null;
+    }
+
+    private String extractSender(Map<String, Object> payload) {
+        // Try common sender field names
+        String[] fields = {"From", "from", "sender", "source", "Sender"};
+        for (String field : fields) {
+            if (payload.containsKey(field) && payload.get(field) != null) {
+                return payload.get(field).toString();
+            }
+        }
+        return "Unknown";
     }
 }

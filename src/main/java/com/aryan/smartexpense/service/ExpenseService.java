@@ -84,6 +84,11 @@ public class ExpenseService {
     @Transactional
     public ExpenseResponseDto processSms(String rawSms) {
         User currentUser = getCurrentUser();
+        return processSmsForUser(rawSms, currentUser);
+    }
+
+    @Transactional
+    public ExpenseResponseDto processSmsForUser(String rawSms, User user) {
         BankSmsParserService.ParsedData data = parserService.parse(rawSms);
 
         if (transactionRepo.findByTxnHash(data.hash).isPresent()) {
@@ -99,7 +104,7 @@ public class ExpenseService {
                 data.type,
                 data.merchant,
                 assignedCategory,
-                currentUser,
+                user,
                 now,
                 rawSms
         );
@@ -108,7 +113,7 @@ public class ExpenseService {
 
         // Budget check logic
         BigDecimal totalSpent = transactionRepo.getTotalSpentByCategoryAndMonth(
-                currentUser,
+                user,
                 assignedCategory,
                 now.getMonthValue(),
                 now.getYear()
