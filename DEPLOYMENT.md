@@ -152,6 +152,44 @@ Your app is already a PWA (Progressive Web App):
 - ✅ Auto-updates when you deploy new version
 - ✅ Responsive design for mobile screens
 
+## New Features
+
+### Merchant Categorization
+The app now automatically categorizes expenses based on merchant names:
+
+**Categories:**
+- Food & Dining: Swiggy, Zomato, Dominos, KFC, McDonald's, etc.
+- Groceries: Blinkit, Zepto, Big Basket, Dunzo, etc.
+- Shopping: Amazon, Flipkart, Myntra, AJIO, Nykaa, etc.
+- Transport: Uber, Ola, Rapido, Namma Yatri, IRCTC, etc.
+- Entertainment: Netflix, Amazon Prime, Spotify, Hotstar, etc.
+- Utilities: Paytm, PhonePe, GPay, Airtel, Jio, etc.
+- Health & Wellness: 1mg, Netmeds, Pharmeasy, etc.
+- Education: Coursera, Udemy, Byju's, etc.
+
+### Merchant Breakdown
+View detailed merchant-wise spending in the "Merchant Breakdown" section, showing:
+- Merchant name
+- Category
+- Total amount spent
+- Sorted by highest spending
+
+### Refund Handling
+- Refunds (CREDIT transactions) are automatically detected
+- Total refund amount shown with green badge
+- Detailed refund list with merchant, amount, and date
+- Historical reports show net spend (after subtracting refunds)
+
+### Add Custom Merchant Rules
+Use the API to add custom merchant categorization:
+```bash
+POST /api/expenses/merchant-rule
+{
+  "keyword": "NEW_MERCHANT",
+  "category": "Shopping"
+}
+```
+
 ---
 
 ## Next Steps
