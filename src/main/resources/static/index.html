@@ -10,16 +10,57 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen p-4 flex flex-col items-center">
 
-<div class="w-full max-w-md space-y-4">
+<!-- Login/Signup Screen -->
+<div id="authScreen" class="w-full max-w-md space-y-4 py-8">
+    <div class="text-center mb-8">
+        <h1 class="text-2xl font-bold tracking-tight text-white">SmartExpense</h1>
+        <p class="text-sm text-slate-400 mt-1">Automated Expense Engine</p>
+    </div>
+
+    <!-- Auth Tabs -->
+    <div class="flex bg-slate-900 rounded-xl p-1 mb-4">
+        <button onclick="showTab('login')" id="loginTab" class="flex-1 py-2 text-xs font-medium rounded-lg bg-blue-600 text-white transition">Login</button>
+        <button onclick="showTab('signup')" id="signupTab" class="flex-1 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition">Sign Up</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="loginForm" class="space-y-3">
+        <input type="email" id="loginEmail" placeholder="Email" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <input type="password" id="loginPassword" placeholder="Password" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <button onclick="login()" class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[0.98] transition font-medium text-sm py-3 rounded-xl text-slate-100">
+            Login
+        </button>
+    </div>
+
+    <!-- Signup Form -->
+    <div id="signupForm" class="space-y-3 hidden">
+        <input type="text" id="signupName" placeholder="Your Name" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <input type="email" id="signupEmail" placeholder="Email" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <input type="password" id="signupPassword" placeholder="Password" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <button onclick="signup()" class="w-full bg-green-600 hover:bg-green-500 active:scale-[0.98] transition font-medium text-sm py-3 rounded-xl text-slate-100">
+            Create Account
+        </button>
+    </div>
+
+    <p id="authError" class="text-red-400 text-xs text-center hidden"></p>
+</div>
+
+<!-- Main Dashboard -->
+<div id="dashboard" class="w-full max-w-md space-y-4 hidden">
     <!-- Header -->
     <header class="flex justify-between items-center py-2 border-b border-slate-800">
         <div>
             <h1 class="text-xl font-bold tracking-tight text-white">SmartExpense</h1>
-            <p class="text-xs text-slate-400">Automated Expense Engine</p>
+            <p class="text-xs text-slate-400" id="userEmail">user@example.com</p>
         </div>
-        <button onclick="fetchAllData()" class="bg-slate-800 hover:bg-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700">
-            Refresh
-        </button>
+        <div class="flex gap-2">
+            <button onclick="fetchAllData()" class="bg-slate-800 hover:bg-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700">
+                Refresh
+            </button>
+            <button onclick="logout()" class="bg-red-900/30 hover:bg-red-900/50 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-800 text-red-400">
+                Logout
+            </button>
+        </div>
     </header>
 
     <!-- Monthly Summary Card -->
@@ -100,13 +141,144 @@
 </div>
 
 <script>
+    let authToken = localStorage.getItem('authToken');
+    let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+
+    // Check if user is logged in on page load
+    if (authToken && currentUser) {
+        showDashboard();
+    } else {
+        showAuthScreen();
+    }
+
+    function showTab(tab) {
+        const loginTab = document.getElementById('loginTab');
+        const signupTab = document.getElementById('signupTab');
+        const loginForm = document.getElementById('loginForm');
+        const signupForm = document.getElementById('signupForm');
+
+        if (tab === 'login') {
+            loginTab.classList.add('bg-blue-600', 'text-white');
+            loginTab.classList.remove('text-slate-400');
+            signupTab.classList.remove('bg-blue-600', 'text-white');
+            signupTab.classList.add('text-slate-400');
+            loginForm.classList.remove('hidden');
+            signupForm.classList.add('hidden');
+        } else {
+            signupTab.classList.add('bg-blue-600', 'text-white');
+            signupTab.classList.remove('text-slate-400');
+            loginTab.classList.remove('bg-blue-600', 'text-white');
+            loginTab.classList.add('text-slate-400');
+            signupForm.classList.remove('hidden');
+            loginForm.classList.add('hidden');
+        }
+    }
+
+    async function login() {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const errorEl = document.getElementById('authError');
+
+        if (!email || !password) {
+            errorEl.textContent = 'Please enter email and password';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                authToken = data.token;
+                currentUser = { email: data.email, userId: data.userId, name: data.name };
+                localStorage.setItem('authToken', authToken);
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                showDashboard();
+            } else {
+                errorEl.textContent = data.message || 'Login failed';
+                errorEl.classList.remove('hidden');
+            }
+        } catch (e) {
+            errorEl.textContent = 'Login failed: ' + e.message;
+            errorEl.classList.remove('hidden');
+        }
+    }
+
+    async function signup() {
+        const name = document.getElementById('signupName').value;
+        const email = document.getElementById('signupEmail').value;
+        const password = document.getElementById('signupPassword').value;
+        const errorEl = document.getElementById('authError');
+
+        if (!name || !email || !password) {
+            errorEl.textContent = 'Please fill all fields';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                authToken = data.token;
+                currentUser = { email: data.email, userId: data.userId, name: data.name };
+                localStorage.setItem('authToken', authToken);
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                showDashboard();
+            } else {
+                errorEl.textContent = data.message || 'Registration failed';
+                errorEl.classList.remove('hidden');
+            }
+        } catch (e) {
+            errorEl.textContent = 'Registration failed: ' + e.message;
+            errorEl.classList.remove('hidden');
+        }
+    }
+
+    function logout() {
+        authToken = null;
+        currentUser = null;
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('currentUser');
+        showAuthScreen();
+    }
+
+    function showAuthScreen() {
+        document.getElementById('authScreen').classList.remove('hidden');
+        document.getElementById('dashboard').classList.add('hidden');
+    }
+
+    function showDashboard() {
+        document.getElementById('authScreen').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
+        document.getElementById('userEmail').textContent = currentUser.email;
+        fetchAllData();
+    }
+
+    // Authenticated fetch wrapper
+    async function authFetch(url, options = {}) {
+        if (!options.headers) options.headers = {};
+        options.headers['Authorization'] = `Bearer ${authToken}`;
+        return fetch(url, options);
+    }
+
     const currentDate = new Date();
     const activeMonth = currentDate.getMonth() + 1;
     const activeYear = currentDate.getFullYear();
 
     async function fetchReport() {
         try {
-            const res = await fetch(`/api/expenses/report?month=${activeMonth}&year=${activeYear}`);
+            const res = await authFetch(`/api/expenses/report?month=${activeMonth}&year=${activeYear}`);
             const data = await res.json();
             const categoryBreakdown = data.categoryBreakdown || {};
             const merchantBreakdown = data.merchantBreakdown || [];
@@ -191,7 +363,7 @@
 
     async function fetchHistory() {
         try {
-            const res = await fetch('/api/expenses/history');
+            const res = await authFetch('/api/expenses/history');
             const history = await res.json();
             const container = document.getElementById('historyList');
             container.innerHTML = '';
@@ -219,7 +391,7 @@
             return;
         }
         try {
-            const res = await fetch(`/api/expenses/reset?month=${activeMonth}&year=${activeYear}`, {
+            const res = await authFetch(`/api/expenses/reset?month=${activeMonth}&year=${activeYear}`, {
                 method: 'DELETE'
             });
             if (res.ok) {
@@ -252,7 +424,7 @@
         }
 
         try {
-            const res = await fetch(url, { method: 'POST', body: formData });
+            const res = await authFetch(url, { method: 'POST', body: formData });
             const result = await res.json();
             if (res.ok) {
                 alert(`Import complete! Inserted: ${result.inserted}, Skipped duplicates: ${result.duplicatesSkipped}`);
@@ -273,7 +445,7 @@
 
     async function fetchCategories() {
         try {
-            const res = await fetch('/api/expenses/categories');
+            const res = await authFetch('/api/expenses/categories');
             const categories = await res.json();
             const select = document.getElementById('manualCategory');
             select.innerHTML = '<option value="">Auto-detect category</option>';
@@ -300,7 +472,7 @@
         }
 
         try {
-            const res = await fetch('/api/expenses/manual-entry', {
+            const res = await authFetch('/api/expenses/manual-entry', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -328,7 +500,10 @@
         }
     }
 
-    fetchAllData();
+    // Only fetch data if user is authenticated
+    if (authToken && currentUser) {
+        fetchAllData();
+    }
 </script>
 </body>
 </html>
