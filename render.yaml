@@ -8,6 +8,8 @@ services:
         value: 8080
       - key: DB_DIALECT
         value: org.hibernate.dialect.PostgreSQLDialect
+      - key: H2_CONSOLE_ENABLED
+        value: false
     # Render will automatically provide DATABASE_URL when you add a PostgreSQL database
     # Add the database resource below to link it
 
