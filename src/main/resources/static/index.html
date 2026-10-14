@@ -123,19 +123,20 @@
         </button>
     </section>
 
-    <!-- Manual Entry Card -->
+    <!-- SMS Paste Card -->
     <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
-        <h2 class="text-sm font-semibold text-slate-200">Manual Entry</h2>
-        <input type="text" id="manualMerchant" placeholder="Merchant name (e.g., Swiggy, Amazon)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
-        <input type="number" id="manualAmount" placeholder="Amount (₹)" step="0.01" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
-        <select id="manualCategory" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500">
-            <option value="">Auto-detect category</option>
-        </select>
-        <select id="manualType" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500">
-            <option value="DEBIT">Expense (Debit)</option>
-            <option value="CREDIT">Refund/Income (Credit)</option>
-        </select>
-        <button onclick="addManualEntry()" class="w-full bg-green-600 hover:bg-green-500 active:scale-[0.98] transition font-medium text-xs py-2.5 rounded-xl text-slate-100">
+        <h2 class="text-sm font-semibold text-slate-200">Paste SMS Text</h2>
+        <textarea id="smsPaste" placeholder="Paste your SMS text here (e.g., Rs 450 debited from account to swiggy)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[100px] resize-none"></textarea>
+        <button onclick="parseSms()" class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[0.98] transition font-medium text-xs py-2.5 rounded-xl text-slate-100">
+            Parse SMS
+        </button>
+        <div id="parsedResult" class="hidden bg-green-950/20 border border-green-900/30 rounded-xl p-3 space-y-1">
+            <p class="text-xs text-green-400"><strong>Merchant:</strong> <span id="parsedMerchant">-</span></p>
+            <p class="text-xs text-green-400"><strong>Amount:</strong> ₹<span id="parsedAmount">-</span></p>
+            <p class="text-xs text-green-400"><strong>Category:</strong> <span id="parsedCategory">-</span></p>
+            <p class="text-xs text-green-400"><strong>Type:</strong> <span id="parsedType">-</span></p>
+        </div>
+        <button id="btnAddParsedEntry" onclick="addParsedEntry()" class="hidden w-full bg-green-600 hover:bg-green-500 active:scale-[0.98] transition font-medium text-xs py-2.5 rounded-xl text-slate-100">
             Add Entry
         </button>
     </section>
@@ -176,6 +177,7 @@
     }
 
     async function login() {
+        provideHapticFeedback();
         const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
         const errorEl = document.getElementById('authError');
@@ -256,15 +258,33 @@
     }
 
     function showAuthScreen() {
-        document.getElementById('authScreen').classList.remove('hidden');
-        document.getElementById('dashboard').classList.add('hidden');
+        const authScreen = document.getElementById('authScreen');
+        const dashboard = document.getElementById('dashboard');
+
+        authScreen.classList.remove('hidden', 'opacity-0');
+        authScreen.classList.add('opacity-100', 'transition-opacity', 'duration-300');
+        dashboard.classList.add('hidden');
     }
 
     function showDashboard() {
-        document.getElementById('authScreen').classList.add('hidden');
-        document.getElementById('dashboard').classList.remove('hidden');
+        const authScreen = document.getElementById('authScreen');
+        const dashboard = document.getElementById('dashboard');
+
+        authScreen.classList.add('opacity-0');
+        setTimeout(() => {
+            authScreen.classList.add('hidden');
+            dashboard.classList.remove('hidden', 'opacity-0');
+            dashboard.classList.add('opacity-100', 'transition-opacity', 'duration-300');
+        }, 300);
+
         document.getElementById('userEmail').textContent = currentUser.email;
         fetchAllData();
+    }
+
+    function provideHapticFeedback() {
+        if (navigator.vibrate) {
+            navigator.vibrate(50);
+        }
     }
 
     // Authenticated fetch wrapper
@@ -462,37 +482,69 @@
         }
     }
 
-    async function addManualEntry() {
-        const merchant = document.getElementById('manualMerchant').value;
-        const amount = document.getElementById('manualAmount').value;
-        const category = document.getElementById('manualCategory').value;
-        const type = document.getElementById('manualType').value;
+    let parsedExpenseData = null;
 
-        if (!merchant || !amount) {
-            alert('Please enter merchant name and amount.');
+    async function parseSms() {
+        provideHapticFeedback();
+        const smsText = document.getElementById('smsPaste').value;
+
+        if (!smsText) {
+            alert('Please paste SMS text');
+            return;
+        }
+
+        try {
+            const res = await authFetch('/api/expenses/parse-sms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: smsText })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                parsedExpenseData = {
+                    merchant: data.merchant,
+                    amount: data.amount,
+                    category: data.category,
+                    type: data.type
+                };
+
+                document.getElementById('parsedMerchant').textContent = data.merchant;
+                document.getElementById('parsedAmount').textContent = data.amount;
+                document.getElementById('parsedCategory').textContent = data.category;
+                document.getElementById('parsedType').textContent = data.type;
+
+                document.getElementById('parsedResult').classList.remove('hidden');
+                document.getElementById('btnAddParsedEntry').classList.remove('hidden');
+            } else {
+                alert('Failed to parse SMS');
+            }
+        } catch (e) {
+            alert('Error parsing SMS: ' + e.message);
+        }
+    }
+
+    async function addParsedEntry() {
+        provideHapticFeedback();
+        if (!parsedExpenseData) {
+            alert('No parsed data available');
             return;
         }
 
         try {
             const res = await authFetch('/api/expenses/manual-entry', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    merchant: merchant,
-                    amount: amount,
-                    category: category || null,
-                    type: type
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(parsedExpenseData)
             });
             const result = await res.json();
             if (res.ok) {
                 alert(`Entry added: ${result.merchant} - ₹${result.amount} (${result.category})`);
                 // Clear form
-                document.getElementById('manualMerchant').value = '';
-                document.getElementById('manualAmount').value = '';
-                document.getElementById('manualCategory').value = '';
+                document.getElementById('smsPaste').value = '';
+                document.getElementById('parsedResult').classList.add('hidden');
+                document.getElementById('btnAddParsedEntry').classList.add('hidden');
+                parsedExpenseData = null;
                 fetchAllData();
             } else {
                 alert('Failed to add entry: ' + (result.message || res.statusText));
@@ -501,6 +553,13 @@
             alert('Error adding entry: ' + e.message);
         }
     }
+
+    // Add haptic feedback to all button clicks
+    document.addEventListener('click', function(e) {
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+            provideHapticFeedback();
+        }
+    });
 
     // Only fetch data if user is authenticated
     if (authToken && currentUser) {

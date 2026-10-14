@@ -4,7 +4,11 @@ import android.Manifest
 import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.view.View
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -46,16 +50,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvRefundList: TextView
     private lateinit var tvHistoryList: TextView
 
-    // Manual entry views
-    private lateinit var etManualMerchant: EditText
-    private lateinit var etManualAmount: EditText
-    private lateinit var spinnerCategory: Spinner
-    private lateinit var spinnerType: Spinner
-    private lateinit var btnAddEntry: Button
+    // SMS paste views
+    private lateinit var etSmsPaste: EditText
+    private lateinit var btnParseSms: Button
+    private lateinit var tvParsedResult: TextView
+    private lateinit var btnAddParsedEntry: Button
 
     private val SMS_PERMISSION_CODE = 101
     private var authToken: String? = null
     private var categories: List<String> = emptyList()
+    private var parsedExpense: Map<String, Any>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -98,28 +102,62 @@ class MainActivity : AppCompatActivity() {
         tvRefundList = findViewById(R.id.tvRefundList)
         tvHistoryList = findViewById(R.id.tvHistoryList)
 
-        // Manual entry
-        etManualMerchant = findViewById(R.id.etManualMerchant)
-        etManualAmount = findViewById(R.id.etManualAmount)
-        spinnerCategory = findViewById(R.id.spinnerCategory)
-        spinnerType = findViewById(R.id.spinnerType)
-        btnAddEntry = findViewById(R.id.btnAddEntry)
-
-        // Setup type spinner
-        val typeAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, listOf("Expense (Debit)", "Refund/Income (Credit)"))
-        typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerType.adapter = typeAdapter
+        // SMS paste
+        etSmsPaste = findViewById(R.id.etSmsPaste)
+        btnParseSms = findViewById(R.id.btnParseSms)
+        tvParsedResult = findViewById(R.id.tvParsedResult)
+        btnAddParsedEntry = findViewById(R.id.btnAddParsedEntry)
     }
 
     private fun setupListeners() {
-        btnLoginTab.setOnClickListener { showLoginTab() }
-        btnSignupTab.setOnClickListener { showSignupTab() }
-        btnLogin.setOnClickListener { login() }
-        btnSignup.setOnClickListener { signup() }
-        btnRefresh.setOnClickListener { fetchAllData() }
-        btnLogout.setOnClickListener { logout() }
-        btnResetMonth.setOnClickListener { confirmResetMonth() }
-        btnAddEntry.setOnClickListener { addManualEntry() }
+        btnLoginTab.setOnClickListener {
+            provideHapticFeedback()
+            showLoginTab()
+        }
+        btnSignupTab.setOnClickListener {
+            provideHapticFeedback()
+            showSignupTab()
+        }
+        btnLogin.setOnClickListener {
+            provideHapticFeedback()
+            login()
+        }
+        btnSignup.setOnClickListener {
+            provideHapticFeedback()
+            signup()
+        }
+        btnRefresh.setOnClickListener {
+            provideHapticFeedback()
+            fetchAllData()
+        }
+        btnLogout.setOnClickListener {
+            provideHapticFeedback()
+            logout()
+        }
+        btnResetMonth.setOnClickListener {
+            provideHapticFeedback()
+            confirmResetMonth()
+        }
+        btnParseSms.setOnClickListener {
+            provideHapticFeedback()
+            parseSms()
+        }
+        btnAddParsedEntry.setOnClickListener {
+            provideHapticFeedback()
+            addParsedEntry()
+        }
+    }
+
+    private fun provideHapticFeedback() {
+        val vibrator = getSystemService(VIBRATOR_SERVICE) as? Vibrator
+        if (vibrator?.hasVibrator() == true) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(50)
+            }
+        }
     }
 
     private fun showLoginTab() {
@@ -155,7 +193,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showDashboard() {
+        val slideIn = AnimationUtils.loadAnimation(this, android.R.anim.fade_in)
+        val slideOut = AnimationUtils.loadAnimation(this, android.R.anim.fade_out)
+
+        authScreen.startAnimation(slideOut)
         authScreen.visibility = View.GONE
+
+        dashboardScreen.startAnimation(slideIn)
         dashboardScreen.visibility = View.VISIBLE
         tvUserEmail.text = getUserEmail() ?: "user@example.com"
         fetchAllData()
@@ -426,48 +470,63 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun addManualEntry() {
-        val merchant = etManualMerchant.text.toString()
-        val amountStr = etManualAmount.text.toString()
-        val category = spinnerCategory.selectedItem?.toString()
-        val typeStr = spinnerType.selectedItem?.toString()
-
-        if (merchant.isBlank() || amountStr.isBlank()) {
-            Toast.makeText(this, "Please enter merchant name and amount.", Toast.LENGTH_SHORT).show()
+    private fun parseSms() {
+        val smsText = etSmsPaste.text.toString()
+        if (smsText.isBlank()) {
+            Toast.makeText(this, "Please paste SMS text", Toast.LENGTH_SHORT).show()
             return
         }
-
-        val amount = amountStr.toDoubleOrNull()
-        if (amount == null) {
-            Toast.makeText(this, "Please enter a valid amount.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val type = if (typeStr?.contains("Credit") == true) "CREDIT" else "DEBIT"
-        val selectedCategory = if (category == "Auto-detect category") null else category
 
         val token = authToken ?: return
 
         lifecycleScope.launch {
             try {
-                val entryMap = mutableMapOf<String, Any>(
-                    "merchant" to merchant,
-                    "amount" to amount,
-                    "type" to type
-                )
-                if (selectedCategory != null) {
-                    entryMap["category"] = selectedCategory
-                }
+                val response = RetrofitClient.apiService.parseSms(ParseSmsRequest(smsText), "Bearer $token")
+                if (response.isSuccessful) {
+                    val data = response.body()
+                    parsedExpense = mapOf(
+                        "merchant" to (data?.merchant ?: ""),
+                        "amount" to (data?.amount ?: 0.0),
+                        "category" to (data?.category ?: ""),
+                        "type" to (data?.type ?: "DEBIT")
+                    )
 
+                    val resultText = """
+                        Merchant: ${data?.merchant}
+                        Amount: ₹${data?.amount}
+                        Category: ${data?.category}
+                        Type: ${data?.type}
+                    """.trimIndent()
+
+                    tvParsedResult.text = resultText
+                    tvParsedResult.visibility = View.VISIBLE
+                    btnAddParsedEntry.visibility = View.VISIBLE
+                    Toast.makeText(this@MainActivity, "SMS parsed successfully", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@MainActivity, "Failed to parse SMS", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, "Error parsing SMS: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun addParsedEntry() {
+        val expense = parsedExpense ?: return
+        val token = authToken ?: return
+
+        lifecycleScope.launch {
+            try {
                 val response = RetrofitClient.apiService.addManualEntry(
-                    entryMap,
+                    expense,
                     "Bearer $token"
                 )
                 if (response.isSuccessful) {
                     Toast.makeText(this@MainActivity, "Entry added successfully", Toast.LENGTH_SHORT).show()
-                    etManualMerchant.text.clear()
-                    etManualAmount.text.clear()
-                    spinnerCategory.setSelection(0)
+                    etSmsPaste.text.clear()
+                    tvParsedResult.text = ""
+                    btnAddParsedEntry.visibility = View.GONE
+                    parsedExpense = null
                     fetchAllData()
                 } else {
                     Toast.makeText(this@MainActivity, "Failed to add entry", Toast.LENGTH_SHORT).show()

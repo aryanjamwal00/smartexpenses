@@ -418,7 +418,7 @@
                     android:textColor="#64748B" />
             </LinearLayout>
 
-            <!-- Manual Entry Card -->
+            <!-- SMS Paste Card -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -430,62 +430,59 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Manual Entry"
+                    android:text="Paste SMS Text"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:textColor="#E2E8F0"
                     android:layout_marginBottom="12dp" />
 
                 <EditText
-                    android:id="@+id/etManualMerchant"
+                    android:id="@+id/etSmsPaste"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Merchant name (e.g., Swiggy, Amazon)"
-                    android:padding="10dp"
+                    android:hint="Paste your SMS text here (e.g., Rs 450 debited from account to swiggy)"
+                    android:padding="12dp"
                     android:background="@drawable/input_background"
                     android:textColor="#F1F5F9"
                     android:textColorHint="#64748B"
                     android:textSize="12sp"
-                    android:layout_marginBottom="8dp" />
-
-                <EditText
-                    android:id="@+id/etManualAmount"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Amount (₹)"
-                    android:inputType="numberDecimal"
-                    android:padding="10dp"
-                    android:background="@drawable/input_background"
-                    android:textColor="#F1F5F9"
-                    android:textColorHint="#64748B"
-                    android:textSize="12sp"
-                    android:layout_marginBottom="8dp" />
-
-                <Spinner
-                    android:id="@+id/spinnerCategory"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/input_background"
-                    android:padding="10dp"
-                    android:layout_marginBottom="8dp" />
-
-                <Spinner
-                    android:id="@+id/spinnerType"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/input_background"
-                    android:padding="10dp"
+                    android:minHeight="100dp"
+                    android:gravity="top"
                     android:layout_marginBottom="12dp" />
 
                 <Button
-                    android:id="@+id/btnAddEntry"
+                    android:id="@+id/btnParseSms"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Parse SMS"
+                    android:textSize="12sp"
+                    android:backgroundTint="#2563EB"
+                    android:textColor="#FFFFFF"
+                    android:padding="10dp"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:id="@+id/tvParsedResult"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textSize="12sp"
+                    android:textColor="#4ADE80"
+                    android:background="#064E3B"
+                    android:padding="12dp"
+                    android:layout_marginBottom="12dp"
+                    android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/btnAddParsedEntry"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Add Entry"
                     android:textSize="12sp"
                     android:backgroundTint="#16A34A"
                     android:textColor="#FFFFFF"
-                    android:padding="10dp" />
+                    android:padding="10dp"
+                    android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

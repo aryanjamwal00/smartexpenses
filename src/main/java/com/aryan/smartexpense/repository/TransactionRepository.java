@@ -62,4 +62,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             "WHERE t.user = :user AND t.type = 'CREDIT' AND MONTH(t.transactionDate) = :month AND YEAR(t.transactionDate) = :year " +
             "ORDER BY t.transactionDate DESC")
     List<Object[]> getRefundDetailsForMonth(@Param("user") User user, @Param("month") int month, @Param("year") int year);
+
+    // Get all transactions for a user ordered by date descending
+    List<Transaction> findByUserOrderByDateDesc(User user);
 }

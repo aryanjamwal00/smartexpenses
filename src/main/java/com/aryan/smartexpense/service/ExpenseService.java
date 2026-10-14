@@ -283,6 +283,60 @@ public class ExpenseService {
         );
     }
 
+    @Transactional
+    public Map<String, Object> updateTransaction(Long id, String merchant, BigDecimal amount, TransactionType type, String categoryName) {
+        User currentUser = getCurrentUser();
+        Transaction transaction = transactionRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Transaction not found"));
+
+        // Verify ownership
+        if (!transaction.getUser().getId().equals(currentUser.getId())) {
+            throw new IllegalArgumentException("You can only edit your own transactions");
+        }
+
+        // Resolve category
+        Category category;
+        if (categoryName != null && !categoryName.isBlank()) {
+            category = categoryRepo.findByNameIgnoreCase(categoryName)
+                    .orElseGet(() -> categoryRepo.save(new Category(categoryName, BigDecimal.ZERO)));
+        } else {
+            category = resolveCategoryForMerchant(merchant);
+        }
+
+        // Update transaction
+        transaction.setMerchant(merchant);
+        transaction.setAmount(amount);
+        transaction.setType(type);
+        transaction.setCategory(category);
+        transactionRepo.save(transaction);
+
+        return Map.of(
+                "message", "Transaction updated successfully",
+                "merchant", merchant,
+                "amount", amount,
+                "type", type.toString(),
+                "category", category.getName()
+        );
+    }
+
+    public List<Map<String, Object>> getUserTransactions() {
+        User currentUser = getCurrentUser();
+        List<Transaction> transactions = transactionRepo.findByUserOrderByDateDesc(currentUser);
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (Transaction tx : transactions) {
+            Map<String, Object> txData = new HashMap<>();
+            txData.put("id", tx.getId());
+            txData.put("merchant", tx.getMerchant());
+            txData.put("amount", tx.getAmount());
+            txData.put("type", tx.getType().toString());
+            txData.put("category", tx.getCategory().getName());
+            txData.put("date", tx.getDate());
+            result.add(txData);
+        }
+        return result;
+    }
+
     public List<Map<String, Object>> getAllCategories() {
         List<Category> categories = categoryRepo.findAll();
         List<Map<String, Object>> result = new ArrayList<>();
