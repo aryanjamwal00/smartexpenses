@@ -4,9 +4,11 @@ import android.Manifest
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.provider.OpenableColumns
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
@@ -715,7 +717,7 @@ class MainActivity : AppCompatActivity() {
         prefs.edit().remove("auth_token").apply()
     }
 
-    private var selectedFileUri: android.net.Uri? = null
+    private var selectedFileUri: Uri? = null
     private val FILE_PICK_CODE = 100
 
     private fun selectFile() {
@@ -739,11 +741,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getFileName(uri: android.net.Uri): String {
+    private fun getFileName(uri: Uri): String {
         var result = ""
         contentResolver.query(uri, null, null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) {
-                val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                 if (index >= 0) {
                     result = cursor.getString(index)
                 }
