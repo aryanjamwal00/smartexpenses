@@ -908,14 +908,14 @@ class MainActivity : AppCompatActivity() {
             val editBtn = Button(this).apply {
                 text = "Edit"
                 textSize = 12f
-                backgroundTint = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#2563EB"))
+                setBackgroundColor(android.graphics.Color.parseColor("#2563EB"))
                 setTextColor(android.graphics.Color.WHITE)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
                 setOnClickListener {
-                    showEditDialog(id, merchant, amount, category, type)
+                    showEditDialog(id, merchant, amount as Double, category, type)
                 }
             }
 
