@@ -189,7 +189,14 @@ class MainActivity : AppCompatActivity() {
                         showDashboard()
                     }
                 } else {
-                    showError("Login failed")
+                    val errorBody = response.errorBody()?.string()
+                    val errorMessage = try {
+                        val errorMap = org.json.JSONObject(errorBody)
+                        errorMap.optString("message", "Login failed")
+                    } catch (e: Exception) {
+                        "Login failed"
+                    }
+                    showError(errorMessage)
                 }
             } catch (e: Exception) {
                 showError("Error: ${e.message}")
@@ -229,7 +236,14 @@ class MainActivity : AppCompatActivity() {
                         showDashboard()
                     }
                 } else {
-                    showError("Registration failed")
+                    val errorBody = response.errorBody()?.string()
+                    val errorMessage = try {
+                        val errorMap = org.json.JSONObject(errorBody)
+                        errorMap.optString("message", "Registration failed")
+                    } catch (e: Exception) {
+                        "Registration failed"
+                    }
+                    showError(errorMessage)
                 }
             } catch (e: Exception) {
                 showError("Error: ${e.message}")
@@ -436,13 +450,17 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
+                val entryMap = mutableMapOf<String, Any>(
+                    "merchant" to merchant,
+                    "amount" to amount,
+                    "type" to type
+                )
+                if (selectedCategory != null) {
+                    entryMap["category"] = selectedCategory
+                }
+
                 val response = RetrofitClient.apiService.addManualEntry(
-                    mapOf(
-                        "merchant" to merchant,
-                        "amount" to amount,
-                        "category" to selectedCategory,
-                        "type" to type
-                    ),
+                    entryMap,
                     "Bearer $token"
                 )
                 if (response.isSuccessful) {

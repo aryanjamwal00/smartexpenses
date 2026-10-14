@@ -4,6 +4,7 @@ import com.aryan.smartexpense.service.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -25,15 +26,21 @@ public class AuthController {
             String phoneNumber = payload.get("phoneNumber");
 
             if (email == null || email.isBlank() || password == null || password.isBlank() || name == null || name.isBlank()) {
-                return ResponseEntity.badRequest().body("Email, password, and name are required");
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "Email, password, and name are required");
+                return ResponseEntity.badRequest().body(error);
             }
 
             Map<String, Object> result = authService.register(email, password, name, phoneNumber);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Registration failed: " + e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Registration failed: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
         }
     }
 
@@ -44,15 +51,21 @@ public class AuthController {
             String password = payload.get("password");
 
             if (email == null || email.isBlank() || password == null || password.isBlank()) {
-                return ResponseEntity.badRequest().body("Email and password are required");
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "Email and password are required");
+                return ResponseEntity.badRequest().body(error);
             }
 
             Map<String, Object> result = authService.login(email, password);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Login failed: " + e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Login failed: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
         }
     }
 }

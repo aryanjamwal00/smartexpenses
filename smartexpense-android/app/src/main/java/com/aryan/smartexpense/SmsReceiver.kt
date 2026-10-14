@@ -56,7 +56,11 @@ class SmsReceiver : BroadcastReceiver() {
                         if (isTransactionMessage(messageBody)) {
                             Log.d(TAG, "Transaction message detected")
                             // Send to backend
-                            sendToBackend(context, messageBody, sender)
+                            if (sender != null) {
+                                sendToBackend(context, messageBody, sender)
+                            } else {
+                                Log.d(TAG, "Sender is null, skipping SMS processing")
+                            }
                         } else {
                             Log.d(TAG, "Non-transaction message ignored")
                         }
@@ -84,11 +88,11 @@ class SmsReceiver : BroadcastReceiver() {
 
                 if (token == null) {
                     Log.d(TAG, "User not logged in, skipping SMS processing")
-                    return
+                    return@launch
                 }
 
                 val apiService = RetrofitClient.apiService
-                val response = apiService.parseSms(message, "Bearer $token")
+                val response = apiService.parseSms(ParseSmsRequest(message), "Bearer $token")
 
                 if (response.isSuccessful) {
                     Log.d(TAG, "SMS sent to backend successfully")
