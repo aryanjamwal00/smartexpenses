@@ -787,38 +787,34 @@ class MainActivity : AppCompatActivity() {
                     val isPdf = fileName.lowercase().endsWith(".pdf")
                     val isCsv = fileName.lowercase().endsWith(".csv")
 
-                    val url = when {
-                        isPdf -> "https://smartexpenses-ft71.onrender.com/api/expenses/upload-pdf"
-                        isCsv -> "https://smartexpenses-ft71.onrender.com/api/expenses/upload-csv"
-                        else -> "https://smartexpenses-ft71.onrender.com/api/expenses/upload-pdf"
+                    val filePart = okhttp3.MultipartBody.Part.createFormData(
+                        "file",
+                        fileName,
+                        bytes.toRequestBody("application/octet-stream".toMediaType())
+                    )
+
+                    val passwordPart = if (isPdf && password.isNotBlank()) {
+                        okhttp3.MultipartBody.Part.createFormData("password", password)
+                    } else {
+                        null
                     }
 
-                    val requestBodyBuilder = okhttp3.MultipartBody.Builder()
-                        .setType(okhttp3.MultipartBody.FORM)
-                        .addFormDataPart("file", fileName, bytes.toRequestBody("application/octet-stream".toMediaType()))
-
-                    // Add password for PDF if provided
-                    if (isPdf && password.isNotBlank()) {
-                        requestBodyBuilder.addFormDataPart("password", password)
+                    val response = if (isPdf) {
+                        RetrofitClient.apiService.uploadPdf(filePart, passwordPart, "Bearer $token")
+                    } else {
+                        RetrofitClient.apiService.uploadCsv(filePart, "Bearer $token")
                     }
-
-                    val requestBody = requestBodyBuilder.build()
-
-                    val request = okhttp3.Request.Builder()
-                        .url(url)
-                        .addHeader("Authorization", "Bearer $token")
-                        .post(requestBody)
-                        .build()
-
-                    val client = OkHttpClient.Builder()
-                        .writeTimeout(300, TimeUnit.SECONDS)
-                        .build()
-
-                    val response = client.newCall(request).execute()
 
                     runOnUiThread {
                         if (response.isSuccessful) {
-                            Toast.makeText(this@MainActivity, "File uploaded successfully", Toast.LENGTH_SHORT).show()
+                            val result = response.body()
+                            val inserted = result?.get("inserted") as? Number ?: 0
+                            val skipped = result?.get("duplicatesSkipped") as? Number ?: 0
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Import complete! Inserted: $inserted, Skipped: $skipped",
+                                Toast.LENGTH_LONG
+                            ).show()
                             fetchAllData()
                             // Reset form
                             selectedFileUri = null
@@ -827,7 +823,18 @@ class MainActivity : AppCompatActivity() {
                             etStatementPassword.visibility = View.GONE
                             btnProcessFile.visibility = View.GONE
                         } else {
-                            Toast.makeText(this@MainActivity, "Upload failed: ${response.code}", Toast.LENGTH_SHORT).show()
+                            val errorBody = response.errorBody()?.string()
+                            val errorMessage = if (errorBody != null) {
+                                try {
+                                    val json = org.json.JSONObject(errorBody)
+                                    json.optString("message", errorBody)
+                                } catch (e: Exception) {
+                                    errorBody
+                                }
+                            } else {
+                                "Upload failed with code ${response.code()}"
+                            }
+                            Toast.makeText(this@MainActivity, "Upload failed: $errorMessage", Toast.LENGTH_LONG).show()
                         }
                         btnProcessFile.isEnabled = true
                         btnProcessFile.text = "Upload & Process"
@@ -836,7 +843,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 e.printStackTrace()
                 runOnUiThread {
-                    Toast.makeText(this@MainActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                     btnProcessFile.isEnabled = true
                     btnProcessFile.text = "Upload & Process"
                 }

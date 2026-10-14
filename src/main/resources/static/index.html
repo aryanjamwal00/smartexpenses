@@ -497,7 +497,7 @@
                 alert(`Import complete! Inserted: ${result.inserted}, Skipped duplicates: ${result.duplicatesSkipped}`);
                 fetchAllData();
             } else {
-                alert('Upload failed: ' + (result.message || res.statusText));
+                alert('Upload failed: ' + (result.message || result || res.statusText));
             }
         } catch (e) {
             alert('Error uploading statement: ' + e.message);

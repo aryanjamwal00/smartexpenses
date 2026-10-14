@@ -1,12 +1,15 @@
 package com.aryan.smartexpense
 
+import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -84,4 +87,19 @@ interface ApiService {
 
     @GET("/")
     suspend fun wakeServer(): Response<Unit>
+
+    @Multipart
+    @POST("/api/expenses/upload-pdf")
+    suspend fun uploadPdf(
+        @Part file: okhttp3.MultipartBody.Part,
+        @Part password: okhttp3.MultipartBody.Part?,
+        @Header("Authorization") token: String
+    ): Response<Map<String, Any>>
+
+    @Multipart
+    @POST("/api/expenses/upload-csv")
+    suspend fun uploadCsv(
+        @Part file: okhttp3.MultipartBody.Part,
+        @Header("Authorization") token: String
+    ): Response<Map<String, Any>>
 }
