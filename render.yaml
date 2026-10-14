@@ -12,6 +12,8 @@ services:
         generateValue: true
       - key: SPRING_JPA_DATABASE_PLATFORM
         value: org.hibernate.dialect.PostgreSQLDialect
+      - key: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+        value: org.postgresql.Driver
     # Link the PostgreSQL database to this service
     databases:
       - smartexpense-db
