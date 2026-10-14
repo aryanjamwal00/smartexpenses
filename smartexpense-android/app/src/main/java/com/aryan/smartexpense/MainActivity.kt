@@ -2,11 +2,7 @@ package com.aryan.smartexpense
 
 import android.Manifest
 import android.app.AlertDialog
-import android.content.Context
 import android.content.pm.PackageManager
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -68,21 +64,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        // Set up global exception handler
-        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            throwable.printStackTrace()
-            runOnUiThread {
-                AlertDialog.Builder(this)
-                    .setTitle("Error")
-                    .setMessage("An error occurred: ${throwable.message}")
-                    .setPositiveButton("OK") { _, _ ->
-                        finish()
-                    }
-                    .setCancelable(false)
-                    .show()
-            }
-        }
 
         initializeViews()
         requestSmsPermission()
@@ -233,11 +214,6 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        if (!isNetworkAvailable()) {
-            showError("No internet connection. Please check your network and try again.")
-            return
-        }
-
         // Show loading indicator
         btnLogin.isEnabled = false
         btnLogin.text = "Logging in..."
@@ -257,26 +233,30 @@ class MainActivity : AppCompatActivity() {
                         saveAuthToken(token)
                         saveUserEmail(userEmail ?: email)
                         authToken = token
-                        Toast.makeText(this@MainActivity, "Login successful", Toast.LENGTH_SHORT).show()
-                        showDashboard()
+                        runOnUiThread {
+                            Toast.makeText(this@MainActivity, "Login successful", Toast.LENGTH_SHORT).show()
+                            showDashboard()
+                        }
                     } else {
-                        showError("Invalid response from server")
+                        runOnUiThread {
+                            showError("Invalid response from server")
+                        }
                     }
                 } else {
-                    val errorBody = response.errorBody()?.string()
-                    val errorMessage = try {
-                        val errorMap = org.json.JSONObject(errorBody)
-                        errorMap.optString("message", "Login failed")
-                    } catch (e: Exception) {
-                        "Login failed"
+                    runOnUiThread {
+                        showError("Login failed")
                     }
-                    showError(errorMessage)
                 }
             } catch (e: Exception) {
-                showError("Error: ${e.message}")
+                e.printStackTrace()
+                runOnUiThread {
+                    showError("Error: ${e.message}")
+                }
             } finally {
-                btnLogin.isEnabled = true
-                btnLogin.text = "Login"
+                runOnUiThread {
+                    btnLogin.isEnabled = true
+                    btnLogin.text = "Login"
+                }
             }
         }
     }
@@ -289,11 +269,6 @@ class MainActivity : AppCompatActivity() {
 
         if (name.isBlank() || email.isBlank() || password.isBlank()) {
             showError("Please fill all required fields")
-            return
-        }
-
-        if (!isNetworkAvailable()) {
-            showError("No internet connection. Please check your network and try again.")
             return
         }
 
@@ -318,26 +293,30 @@ class MainActivity : AppCompatActivity() {
                         saveAuthToken(token)
                         saveUserEmail(userEmail ?: email)
                         authToken = token
-                        Toast.makeText(this@MainActivity, "Registration successful", Toast.LENGTH_SHORT).show()
-                        showDashboard()
+                        runOnUiThread {
+                            Toast.makeText(this@MainActivity, "Registration successful", Toast.LENGTH_SHORT).show()
+                            showDashboard()
+                        }
                     } else {
-                        showError("Invalid response from server")
+                        runOnUiThread {
+                            showError("Invalid response from server")
+                        }
                     }
                 } else {
-                    val errorBody = response.errorBody()?.string()
-                    val errorMessage = try {
-                        val errorMap = org.json.JSONObject(errorBody)
-                        errorMap.optString("message", "Registration failed")
-                    } catch (e: Exception) {
-                        "Registration failed"
+                    runOnUiThread {
+                        showError("Registration failed")
                     }
-                    showError(errorMessage)
                 }
             } catch (e: Exception) {
-                showError("Error: ${e.message}")
+                e.printStackTrace()
+                runOnUiThread {
+                    showError("Error: ${e.message}")
+                }
             } finally {
-                btnSignup.isEnabled = true
-                btnSignup.text = "Create Account"
+                runOnUiThread {
+                    btnSignup.isEnabled = true
+                    btnSignup.text = "Create Account"
+                }
             }
         }
     }
@@ -588,19 +567,6 @@ class MainActivity : AppCompatActivity() {
                 arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS),
                 SMS_PERMISSION_CODE
             )
-        }
-    }
-
-    private fun isNetworkAvailable(): Boolean {
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val network = connectivityManager.activeNetwork ?: return false
-            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-            return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-        } else {
-            @Suppress("DEPRECATION")
-            val networkInfo = connectivityManager.activeNetworkInfo
-            return networkInfo != null && networkInfo.isConnected
         }
     }
 
