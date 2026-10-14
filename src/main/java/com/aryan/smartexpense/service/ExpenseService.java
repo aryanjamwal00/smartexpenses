@@ -321,7 +321,7 @@ public class ExpenseService {
 
     public List<Map<String, Object>> getUserTransactions() {
         User currentUser = getCurrentUser();
-        List<Transaction> transactions = transactionRepo.findByUserOrderByDateDesc(currentUser);
+        List<Transaction> transactions = transactionRepo.findByUserOrderByTransactionDateDesc(currentUser);
         List<Map<String, Object>> result = new ArrayList<>();
 
         for (Transaction tx : transactions) {

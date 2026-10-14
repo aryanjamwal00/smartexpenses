@@ -64,5 +64,5 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Object[]> getRefundDetailsForMonth(@Param("user") User user, @Param("month") int month, @Param("year") int year);
 
     // Get all transactions for a user ordered by date descending
-    List<Transaction> findByUserOrderByDateDesc(User user);
+    List<Transaction> findByUserOrderByTransactionDateDesc(User user);
 }
