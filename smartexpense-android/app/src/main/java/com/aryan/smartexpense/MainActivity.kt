@@ -878,9 +878,10 @@ class MainActivity : AppCompatActivity() {
             }
 
             val metaTv = TextView(this).apply {
-                text = "$category • ${date.take(10)}"
+                val dateStr = date.toString().take(10)
+                text = "$category • $dateStr"
                 textSize = 12f
-                setTextColor(android.graphics.Color.parseColor("#64748B")
+                setTextColor(android.graphics.Color.parseColor("#64748B"))
             }
 
             val actionLayout = LinearLayout(this).apply {
