@@ -248,14 +248,15 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 } else {
+                    val errorBody = response.errorBody()?.string()
                     runOnUiThread {
-                        showError("Login failed")
+                        showError("Login failed: ${response.code()} - $errorBody")
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 runOnUiThread {
-                    showError("Error: ${e.message}")
+                    showError("Error: ${e.javaClass.simpleName} - ${e.message}")
                 }
             } finally {
                 runOnUiThread {
@@ -308,14 +309,15 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 } else {
+                    val errorBody = response.errorBody()?.string()
                     runOnUiThread {
-                        showError("Registration failed")
+                        showError("Registration failed: ${response.code()} - $errorBody")
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 runOnUiThread {
-                    showError("Error: ${e.message}")
+                    showError("Error: ${e.javaClass.simpleName} - ${e.message}")
                 }
             } finally {
                 runOnUiThread {
