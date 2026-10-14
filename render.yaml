@@ -6,14 +6,13 @@ services:
     envVars:
       - key: PORT
         value: 8080
-      - key: DB_DIALECT
-        value: org.hibernate.dialect.PostgreSQLDialect
       - key: H2_CONSOLE_ENABLED
         value: false
       - key: WEBHOOK_SECRET
         generateValue: true
-    # Render will automatically provide DATABASE_URL when you add a PostgreSQL database
-    # Add the database resource below to link it
+    # Link the PostgreSQL database to this service
+    databases:
+      - smartexpense-db
 
 databases:
   - name: smartexpense-db

@@ -69,6 +69,21 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Set up global exception handler
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            throwable.printStackTrace()
+            runOnUiThread {
+                AlertDialog.Builder(this)
+                    .setTitle("Error")
+                    .setMessage("An error occurred: ${throwable.message}")
+                    .setPositiveButton("OK") { _, _ ->
+                        finish()
+                    }
+                    .setCancelable(false)
+                    .show()
+            }
+        }
+
         initializeViews()
         requestSmsPermission()
         checkAuthState()
