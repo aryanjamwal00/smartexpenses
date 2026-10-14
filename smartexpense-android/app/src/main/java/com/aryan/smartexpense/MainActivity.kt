@@ -2,7 +2,11 @@ package com.aryan.smartexpense
 
 import android.Manifest
 import android.app.AlertDialog
+import android.content.Context
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -214,6 +218,15 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        if (!isNetworkAvailable()) {
+            showError("No internet connection. Please check your network and try again.")
+            return
+        }
+
+        // Show loading indicator
+        btnLogin.isEnabled = false
+        btnLogin.text = "Logging in..."
+
         lifecycleScope.launch {
             try {
                 val response = RetrofitClient.apiService.login(mapOf(
@@ -231,6 +244,8 @@ class MainActivity : AppCompatActivity() {
                         authToken = token
                         Toast.makeText(this@MainActivity, "Login successful", Toast.LENGTH_SHORT).show()
                         showDashboard()
+                    } else {
+                        showError("Invalid response from server")
                     }
                 } else {
                     val errorBody = response.errorBody()?.string()
@@ -244,6 +259,9 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 showError("Error: ${e.message}")
+            } finally {
+                btnLogin.isEnabled = true
+                btnLogin.text = "Login"
             }
         }
     }
@@ -258,6 +276,15 @@ class MainActivity : AppCompatActivity() {
             showError("Please fill all required fields")
             return
         }
+
+        if (!isNetworkAvailable()) {
+            showError("No internet connection. Please check your network and try again.")
+            return
+        }
+
+        // Show loading indicator
+        btnSignup.isEnabled = false
+        btnSignup.text = "Creating account..."
 
         lifecycleScope.launch {
             try {
@@ -278,6 +305,8 @@ class MainActivity : AppCompatActivity() {
                         authToken = token
                         Toast.makeText(this@MainActivity, "Registration successful", Toast.LENGTH_SHORT).show()
                         showDashboard()
+                    } else {
+                        showError("Invalid response from server")
                     }
                 } else {
                     val errorBody = response.errorBody()?.string()
@@ -291,6 +320,9 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 showError("Error: ${e.message}")
+            } finally {
+                btnSignup.isEnabled = true
+                btnSignup.text = "Create Account"
             }
         }
     }
@@ -541,6 +573,19 @@ class MainActivity : AppCompatActivity() {
                 arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS),
                 SMS_PERMISSION_CODE
             )
+        }
+    }
+
+    private fun isNetworkAvailable(): Boolean {
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val network = connectivityManager.activeNetwork ?: return false
+            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+            return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        } else {
+            @Suppress("DEPRECATION")
+            val networkInfo = connectivityManager.activeNetworkInfo
+            return networkInfo != null && networkInfo.isConnected
         }
     }
 
