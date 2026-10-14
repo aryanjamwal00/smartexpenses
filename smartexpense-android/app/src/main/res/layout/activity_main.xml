@@ -282,7 +282,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Total Spent (Active Month)"
+                        android:text="Monthly Summary (Active Month)"
                         android:textSize="12sp"
                         android:textColor="#94A3B8" />
 
@@ -297,27 +297,77 @@
                         android:focusable="true" />
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/tvTotalSpend"
+                <!-- Debit Section -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="₹0.00"
-                    android:textSize="32sp"
-                    android:textStyle="bold"
-                    android:textColor="#FFFFFF"
-                    android:layout_marginTop="8dp" />
+                    android:orientation="vertical"
+                    android:background="#450A0A"
+                    android:padding="12dp"
+                    android:layout_marginTop="12dp"
+                    android:radius="12dp">
 
-                <TextView
-                    android:id="@+id/tvRefundBadge"
-                    android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Debit (Expenses)"
+                            android:textSize="12sp"
+                            android:textColor="#F87171"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvTotalDebit"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="₹0.00"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:textColor="#FCA5A5"
+                        android:layout_marginTop="4dp" />
+                </LinearLayout>
+
+                <!-- Credit Section -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Refunds: ₹0.00"
-                    android:textSize="12sp"
-                    android:textColor="#4ADE80"
+                    android:orientation="vertical"
                     android:background="#064E3B"
-                    android:padding="8dp"
-                    android:layout_marginTop="8dp"
-                    android:visibility="gone" />
+                    android:padding="12dp"
+                    android:layout_marginTop="12dp"
+                    android:radius="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Credit (Refunds/Income)"
+                            android:textSize="12sp"
+                            android:textColor="#4ADE80"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvTotalCredit"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="₹0.00"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:textColor="#86EFAC"
+                        android:layout_marginTop="4dp" />
+                </LinearLayout>
 
                 <View
                     android:layout_width="match_parent"

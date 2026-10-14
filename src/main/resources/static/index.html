@@ -67,21 +67,32 @@
     <!-- Monthly Summary Card -->
     <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm relative">
         <div class="flex justify-between items-center">
-            <span class="text-xs font-medium text-slate-400">Total Spent (Active Month)</span>
+            <span class="text-xs font-medium text-slate-400">Monthly Summary (Active Month)</span>
             <button onclick="confirmReset()" class="text-red-400 hover:text-red-300 text-xs font-medium">
                 Reset Month
             </button>
         </div>
-        <p id="totalSpend" class="text-3xl font-extrabold text-white mt-2">₹0.00</p>
 
-        <!-- Refund Badge -->
-        <div id="refundBadge" class="hidden mt-2">
-            <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-green-900/30 text-green-400 border border-green-800">
-                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        <!-- Debit Section -->
+        <div class="mt-3 p-3 rounded-xl bg-red-950/20 border border-red-900/30">
+            <div class="flex items-center gap-2 mb-1">
+                <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
                 </svg>
-                Refunds: ₹<span id="totalRefunds">0.00</span>
-            </span>
+                <span class="text-xs font-medium text-red-400">Debit (Expenses)</span>
+            </div>
+            <p id="totalDebit" class="text-2xl font-extrabold text-red-300">₹0.00</p>
+        </div>
+
+        <!-- Credit Section -->
+        <div class="mt-3 p-3 rounded-xl bg-green-950/20 border border-green-900/30">
+            <div class="flex items-center gap-2 mb-1">
+                <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+                <span class="text-xs font-medium text-green-400">Credit (Refunds/Income)</span>
+            </div>
+            <p id="totalCredit" class="text-2xl font-extrabold text-green-300">₹0.00</p>
         </div>
 
         <div id="categoryList" class="mt-4 space-y-2 border-t border-slate-800/80 pt-3 text-sm">
@@ -342,7 +353,7 @@
             const refundDetails = data.refundDetails || [];
 
             // Category breakdown
-            let sum = 0;
+            let debitSum = 0;
             const container = document.getElementById('categoryList');
             container.innerHTML = '';
 
@@ -351,23 +362,15 @@
                 container.innerHTML = '<p class="text-slate-500 text-xs text-center">No expenses recorded for this month.</p>';
             } else {
                 for (const [category, amount] of Object.entries(categoryBreakdown)) {
-                    sum += Number(amount);
+                    debitSum += Number(amount);
                     const row = document.createElement('div');
                     row.className = 'flex justify-between items-center text-xs py-1 border-b border-slate-800/50 last:border-0';
                     row.innerHTML = `<span class="text-slate-300">${category}</span><span class="font-semibold text-slate-100">₹${Number(amount).toFixed(2)}</span>`;
                     container.appendChild(row);
                 }
             }
-            document.getElementById('totalSpend').innerText = `₹${sum.toFixed(2)}`;
-
-            // Refund badge
-            const refundBadge = document.getElementById('refundBadge');
-            if (totalRefunds > 0) {
-                refundBadge.classList.remove('hidden');
-                document.getElementById('totalRefunds').innerText = Number(totalRefunds).toFixed(2);
-            } else {
-                refundBadge.classList.add('hidden');
-            }
+            document.getElementById('totalDebit').innerText = `₹${debitSum.toFixed(2)}`;
+            document.getElementById('totalCredit').innerText = `₹${Number(totalRefunds).toFixed(2)}`;
 
             // Merchant breakdown
             const merchantContainer = document.getElementById('merchantList');

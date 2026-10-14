@@ -49,8 +49,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvUserEmail: TextView
     private lateinit var btnRefresh: Button
     private lateinit var btnLogout: Button
-    private lateinit var tvTotalSpend: TextView
-    private lateinit var tvRefundBadge: TextView
+    private lateinit var tvTotalDebit: TextView
+    private lateinit var tvTotalCredit: TextView
     private lateinit var btnResetMonth: TextView
     private lateinit var tvCategoryBreakdown: TextView
     private lateinit var tvMerchantList: TextView
@@ -110,8 +110,8 @@ class MainActivity : AppCompatActivity() {
         tvUserEmail = findViewById(R.id.tvUserEmail)
         btnRefresh = findViewById(R.id.btnRefresh)
         btnLogout = findViewById(R.id.btnLogout)
-        tvTotalSpend = findViewById(R.id.tvTotalSpend)
-        tvRefundBadge = findViewById(R.id.tvRefundBadge)
+        tvTotalDebit = findViewById(R.id.tvTotalDebit)
+        tvTotalCredit = findViewById(R.id.tvTotalCredit)
         btnResetMonth = findViewById(R.id.btnResetMonth)
         tvCategoryBreakdown = findViewById(R.id.tvCategoryBreakdown)
         tvMerchantList = findViewById(R.id.tvMerchantList)
@@ -466,26 +466,19 @@ class MainActivity : AppCompatActivity() {
 
                     // Category breakdown
                     val reportText = StringBuilder()
-                    var total = 0.0
+                    var debitTotal = 0.0
                     if (categoryBreakdown != null && categoryBreakdown.isNotEmpty()) {
                         categoryBreakdown.forEach { (category, amount) ->
                             val amt = (amount as? Number)?.toDouble() ?: 0.0
-                            total += amt
+                            debitTotal += amt
                             reportText.append("$category: ₹${String.format("%.2f", amt)}\n")
                         }
                     } else {
                         reportText.append("No expenses recorded for this month.")
                     }
                     tvCategoryBreakdown.text = reportText.toString()
-                    tvTotalSpend.text = "₹${String.format("%.2f", total)}"
-
-                    // Refund badge
-                    if (totalRefunds > 0) {
-                        tvRefundBadge.visibility = View.VISIBLE
-                        tvRefundBadge.text = "Refunds: ₹${String.format("%.2f", totalRefunds)}"
-                    } else {
-                        tvRefundBadge.visibility = View.GONE
-                    }
+                    tvTotalDebit.text = "₹${String.format("%.2f", debitTotal)}"
+                    tvTotalCredit.text = "₹${String.format("%.2f", totalRefunds)}"
 
                     // Merchant breakdown
                     val merchantText = StringBuilder()
