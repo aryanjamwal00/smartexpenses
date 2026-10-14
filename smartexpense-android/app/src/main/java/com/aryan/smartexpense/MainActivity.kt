@@ -256,7 +256,12 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 e.printStackTrace()
                 runOnUiThread {
-                    showError("Error: ${e.javaClass.simpleName} - ${e.message}")
+                    val errorMessage = if (e.message?.contains("timeout") == true) {
+                        "Server is waking up. Please wait 30-60 seconds and try again."
+                    } else {
+                        "Error: ${e.javaClass.simpleName} - ${e.message}"
+                    }
+                    showError(errorMessage)
                 }
             } finally {
                 runOnUiThread {
@@ -317,7 +322,12 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 e.printStackTrace()
                 runOnUiThread {
-                    showError("Error: ${e.javaClass.simpleName} - ${e.message}")
+                    val errorMessage = if (e.message?.contains("timeout") == true) {
+                        "Server is waking up. Please wait 30-60 seconds and try again."
+                    } else {
+                        "Error: ${e.javaClass.simpleName} - ${e.message}"
+                    }
+                    showError(errorMessage)
                 }
             } finally {
                 runOnUiThread {
