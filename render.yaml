@@ -10,6 +10,8 @@ services:
         value: false
       - key: WEBHOOK_SECRET
         generateValue: true
+      - key: SPRING_JPA_DATABASE_PLATFORM
+        value: org.hibernate.dialect.PostgreSQLDialect
     # Link the PostgreSQL database to this service
     databases:
       - smartexpense-db

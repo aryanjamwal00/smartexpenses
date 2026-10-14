@@ -418,6 +418,72 @@
                     android:textColor="#64748B" />
             </LinearLayout>
 
+            <!-- Upload Statement Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1E293B"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Import Bank Statement"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#E2E8F0"
+                    android:layout_marginBottom="12dp" />
+
+                <Button
+                    android:id="@+id/btnUploadPdf"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Select PDF/CSV File"
+                    android:textSize="12sp"
+                    android:backgroundTint="#7C3AED"
+                    android:textColor="#FFFFFF"
+                    android:padding="10dp" />
+
+                <TextView
+                    android:id="@+id/tvSelectedFile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No file selected"
+                    android:textSize="12sp"
+                    android:textColor="#64748B"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone" />
+
+                <EditText
+                    android:id="@+id/etStatementPassword"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="PDF Password (if required)"
+                    android:inputType="textPassword"
+                    android:padding="12dp"
+                    android:background="@drawable/input_background"
+                    android:textColor="#F1F5F9"
+                    android:textColorHint="#64748B"
+                    android:textSize="12sp"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="12dp"
+                    android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/btnProcessFile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Upload &amp;amp; Process"
+                    android:textSize="12sp"
+                    android:backgroundTint="#2563EB"
+                    android:textColor="#FFFFFF"
+                    android:padding="10dp"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
             <!-- SMS Paste Card -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -482,57 +548,6 @@
                     android:backgroundTint="#16A34A"
                     android:textColor="#FFFFFF"
                     android:padding="10dp"
-                    android:visibility="gone" />
-            </LinearLayout>
-
-            <!-- Upload Statement Card -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="#1E293B"
-                android:padding="16dp"
-                android:layout_marginBottom="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Upload Bank Statement"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="#E2E8F0"
-                    android:layout_marginBottom="12dp" />
-
-                <Button
-                    android:id="@+id/btnUploadPdf"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Select PDF/CSV File"
-                    android:textSize="12sp"
-                    android:backgroundTint="#7C3AED"
-                    android:textColor="#FFFFFF"
-                    android:padding="10dp" />
-
-                <TextView
-                    android:id="@+id/tvSelectedFile"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="No file selected"
-                    android:textSize="12sp"
-                    android:textColor="#64748B"
-                    android:layout_marginTop="8dp"
-                    android:visibility="gone" />
-
-                <Button
-                    android:id="@+id/btnProcessFile"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Upload &amp;amp; Process"
-                    android:textSize="12sp"
-                    android:backgroundTint="#8B5CF6"
-                    android:textColor="#FFFFFF"
-                    android:padding="10dp"
-                    android:layout_marginTop="12dp"
                     android:visibility="gone" />
             </LinearLayout>
 

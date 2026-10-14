@@ -67,6 +67,7 @@ class MainActivity : AppCompatActivity() {
     // Upload statement views
     private lateinit var btnUploadPdf: Button
     private lateinit var tvSelectedFile: TextView
+    private lateinit var etStatementPassword: EditText
     private lateinit var btnProcessFile: Button
 
     // Recent transactions views
@@ -127,6 +128,7 @@ class MainActivity : AppCompatActivity() {
         // Upload statement
         btnUploadPdf = findViewById(R.id.btnUploadPdf)
         tvSelectedFile = findViewById(R.id.tvSelectedFile)
+        etStatementPassword = findViewById(R.id.etStatementPassword)
         btnProcessFile = findViewById(R.id.btnProcessFile)
 
         // Recent transactions
@@ -736,6 +738,7 @@ class MainActivity : AppCompatActivity() {
                 val fileName = getFileName(uri)
                 tvSelectedFile.text = fileName
                 tvSelectedFile.visibility = View.VISIBLE
+                etStatementPassword.visibility = View.VISIBLE
                 btnProcessFile.visibility = View.VISIBLE
             }
         }
@@ -770,13 +773,30 @@ class MainActivity : AppCompatActivity() {
 
                 if (bytes != null) {
                     val fileName = getFileName(uri)
-                    val requestBody = okhttp3.MultipartBody.Builder()
+                    val password = etStatementPassword.text.toString()
+
+                    val isPdf = fileName.lowercase().endsWith(".pdf")
+                    val isCsv = fileName.lowercase().endsWith(".csv")
+
+                    val url = when {
+                        isPdf -> "https://smartexpenses-ft71.onrender.com/api/expenses/upload-pdf"
+                        isCsv -> "https://smartexpenses-ft71.onrender.com/api/expenses/upload-csv"
+                        else -> "https://smartexpenses-ft71.onrender.com/api/expenses/upload-pdf"
+                    }
+
+                    val requestBodyBuilder = okhttp3.MultipartBody.Builder()
                         .setType(okhttp3.MultipartBody.FORM)
                         .addFormDataPart("file", fileName, bytes.toRequestBody("application/octet-stream".toMediaType()))
-                        .build()
+
+                    // Add password for PDF if provided
+                    if (isPdf && password.isNotBlank()) {
+                        requestBodyBuilder.addFormDataPart("password", password)
+                    }
+
+                    val requestBody = requestBodyBuilder.build()
 
                     val request = okhttp3.Request.Builder()
-                        .url("https://smartexpenses-ft71.onrender.com/api/expenses/upload-pdf")
+                        .url(url)
                         .addHeader("Authorization", "Bearer $token")
                         .post(requestBody)
                         .build()
@@ -791,6 +811,12 @@ class MainActivity : AppCompatActivity() {
                         if (response.isSuccessful) {
                             Toast.makeText(this@MainActivity, "File uploaded successfully", Toast.LENGTH_SHORT).show()
                             fetchAllData()
+                            // Reset form
+                            selectedFileUri = null
+                            tvSelectedFile.visibility = View.GONE
+                            etStatementPassword.text.clear()
+                            etStatementPassword.visibility = View.GONE
+                            btnProcessFile.visibility = View.GONE
                         } else {
                             Toast.makeText(this@MainActivity, "Upload failed: ${response.code}", Toast.LENGTH_SHORT).show()
                         }
