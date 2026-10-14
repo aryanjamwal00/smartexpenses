@@ -221,19 +221,26 @@ class MainActivity : AppCompatActivity() {
 
         // Show loading indicator
         btnLogin.isEnabled = false
-        btnLogin.text = "Connecting..."
+        btnLogin.text = "Testing connection..."
 
         lifecycleScope.launch {
             try {
-                // First, try to wake up the server
+                // First, test connectivity
+                btnLogin.text = "Testing connection..."
                 try {
-                    RetrofitClient.apiService.wakeServer()
+                    val wakeResponse = RetrofitClient.apiService.wakeServer()
+                    android.util.Log.d("SmartExpense", "Wake server response: ${wakeResponse.code()}")
                 } catch (e: Exception) {
-                    // Ignore wake server errors
+                    android.util.Log.e("SmartExpense", "Wake server failed", e)
+                    runOnUiThread {
+                        showError("Cannot connect to server.\nPlease check your internet connection.\n\nError: ${e.message}")
+                    }
+                    return@launch
                 }
 
-                // Wait a moment for server to wake up
-                kotlinx.coroutines.delay(2000)
+                // Wait for server to wake up
+                btnLogin.text = "Waking server..."
+                kotlinx.coroutines.delay(3000)
 
                 // Now try login with retry logic
                 var success = false
@@ -242,10 +249,13 @@ class MainActivity : AppCompatActivity() {
                 repeat(3) { attempt ->
                     try {
                         btnLogin.text = "Connecting... (Attempt ${attempt + 1}/3)"
+                        android.util.Log.d("SmartExpense", "Login attempt ${attempt + 1}")
                         val response = RetrofitClient.apiService.login(mapOf(
                             "email" to email,
                             "password" to password
                         ))
+
+                        android.util.Log.d("SmartExpense", "Login response code: ${response.code()}")
 
                         if (response.isSuccessful) {
                             val data = response.body()
@@ -264,23 +274,26 @@ class MainActivity : AppCompatActivity() {
                             }
                         } else {
                             val errorBody = response.errorBody()?.string()
+                            android.util.Log.e("SmartExpense", "Login failed: ${response.code()} - $errorBody")
                             lastError = Exception("HTTP ${response.code()}: $errorBody")
                         }
                     } catch (e: Exception) {
+                        android.util.Log.e("SmartExpense", "Login attempt ${attempt + 1} failed", e)
                         lastError = e
                         if (attempt < 2) {
-                            kotlinx.coroutines.delay(3000) // Wait 3 seconds before retry
+                            kotlinx.coroutines.delay(3000)
                         }
                     }
                 }
 
                 if (!success) {
                     runOnUiThread {
-                        showError("Login failed after 3 attempts. Please try again.\n${lastError?.message}")
+                        showError("Login failed after 3 attempts.\n\nLast error: ${lastError?.javaClass?.simpleName}\n${lastError?.message}")
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                android.util.Log.e("SmartExpense", "Login error", e)
                 runOnUiThread {
                     showError("Error: ${e.javaClass.simpleName} - ${e.message}")
                 }
