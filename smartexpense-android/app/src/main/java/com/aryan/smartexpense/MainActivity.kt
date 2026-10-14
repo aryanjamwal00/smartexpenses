@@ -149,14 +149,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun provideHapticFeedback() {
-        val vibrator = getSystemService(VIBRATOR_SERVICE) as? Vibrator
-        if (vibrator?.hasVibrator() == true) {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator.vibrate(50)
+        try {
+            val vibrator = getSystemService(VIBRATOR_SERVICE) as? Vibrator
+            if (vibrator?.hasVibrator() == true) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(50)
+                }
             }
+        } catch (e: Exception) {
+            // Ignore vibration errors (e.g., permission denied on some devices)
+            e.printStackTrace()
         }
     }
 
