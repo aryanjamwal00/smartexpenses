@@ -17,6 +17,9 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class MainActivity : AppCompatActivity() {
 
@@ -55,6 +58,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnParseSms: Button
     private lateinit var tvParsedResult: TextView
     private lateinit var btnAddParsedEntry: Button
+
+    // Upload statement views
+    private lateinit var btnUploadPdf: Button
+    private lateinit var tvSelectedFile: TextView
+    private lateinit var btnProcessFile: Button
+
+    // Recent transactions views
+    private lateinit var transactionsContainer: LinearLayout
 
     private val SMS_PERMISSION_CODE = 101
     private var authToken: String? = null
@@ -107,6 +118,14 @@ class MainActivity : AppCompatActivity() {
         btnParseSms = findViewById(R.id.btnParseSms)
         tvParsedResult = findViewById(R.id.tvParsedResult)
         btnAddParsedEntry = findViewById(R.id.btnAddParsedEntry)
+
+        // Upload statement
+        btnUploadPdf = findViewById(R.id.btnUploadPdf)
+        tvSelectedFile = findViewById(R.id.tvSelectedFile)
+        btnProcessFile = findViewById(R.id.btnProcessFile)
+
+        // Recent transactions
+        transactionsContainer = findViewById(R.id.transactionsContainer)
     }
 
     private fun setupListeners() {
@@ -145,6 +164,16 @@ class MainActivity : AppCompatActivity() {
         btnAddParsedEntry.setOnClickListener {
             provideHapticFeedback()
             addParsedEntry()
+        }
+
+        btnUploadPdf.setOnClickListener {
+            provideHapticFeedback()
+            selectFile()
+        }
+
+        btnProcessFile.setOnClickListener {
+            provideHapticFeedback()
+            uploadFile()
         }
     }
 
@@ -408,6 +437,7 @@ class MainActivity : AppCompatActivity() {
         fetchReport()
         fetchHistory()
         fetchCategories()
+        fetchTransactions()
     }
 
     private fun fetchReport() {
@@ -680,5 +710,294 @@ class MainActivity : AppCompatActivity() {
     private fun clearAuthToken() {
         val prefs = getSharedPreferences("SmartExpense", MODE_PRIVATE)
         prefs.edit().remove("auth_token").apply()
+    }
+
+    private var selectedFileUri: android.net.Uri? = null
+    private val FILE_PICK_CODE = 100
+
+    private fun selectFile() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "*/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        startActivityForResult(intent, FILE_PICK_CODE)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == FILE_PICK_CODE && resultCode == RESULT_OK) {
+            data?.data?.let { uri ->
+                selectedFileUri = uri
+                val fileName = getFileName(uri)
+                tvSelectedFile.text = fileName
+                tvSelectedFile.visibility = View.VISIBLE
+                btnProcessFile.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    private fun getFileName(uri: android.net.Uri): String {
+        var result = ""
+        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (index >= 0) {
+                    result = cursor.getString(index)
+                }
+            }
+        }
+        if (result.isBlank()) result = "Selected file"
+        return result
+    }
+
+    private fun uploadFile() {
+        val uri = selectedFileUri ?: return
+        val token = authToken ?: return
+
+        btnProcessFile.isEnabled = false
+        btnProcessFile.text = "Uploading..."
+
+        lifecycleScope.launch {
+            try {
+                val inputStream = contentResolver.openInputStream(uri)
+                val bytes = inputStream?.readBytes()
+                inputStream?.close()
+
+                if (bytes != null) {
+                    val fileName = getFileName(uri)
+                    val requestBody = okhttp3.MultipartBody.Builder()
+                        .setType(okhttp3.MultipartBody.FORM)
+                        .addFormDataPart("file", fileName, bytes.toRequestBody("application/octet-stream".toMediaType()))
+                        .build()
+
+                    val request = okhttp3.Request.Builder()
+                        .url("https://smartexpenses-ft71.onrender.com/api/expenses/upload-pdf")
+                        .addHeader("Authorization", "Bearer $token")
+                        .post(requestBody)
+                        .build()
+
+                    val client = OkHttpClient.Builder()
+                        .writeTimeout(300, TimeUnit.SECONDS)
+                        .build()
+
+                    val response = client.newCall(request).execute()
+
+                    runOnUiThread {
+                        if (response.isSuccessful) {
+                            Toast.makeText(this@MainActivity, "File uploaded successfully", Toast.LENGTH_SHORT).show()
+                            fetchAllData()
+                        } else {
+                            Toast.makeText(this@MainActivity, "Upload failed: ${response.code}", Toast.LENGTH_SHORT).show()
+                        }
+                        btnProcessFile.isEnabled = true
+                        btnProcessFile.text = "Upload & Process"
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    btnProcessFile.isEnabled = true
+                    btnProcessFile.text = "Upload & Process"
+                }
+            }
+        }
+    }
+
+    private fun fetchTransactions() {
+        val token = authToken ?: return
+
+        lifecycleScope.launch {
+            try {
+                val response = RetrofitClient.apiService.getTransactions("Bearer $token")
+                if (response.isSuccessful) {
+                    val transactions = response.body()
+                    runOnUiThread {
+                        displayTransactions(transactions ?: emptyList())
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun displayTransactions(transactions: List<Map<String, Any>>) {
+        transactionsContainer.removeAllViews()
+
+        if (transactions.isEmpty()) {
+            val tv = TextView(this).apply {
+                text = "No transactions yet."
+                textSize = 12f
+                setTextColor(android.graphics.Color.parseColor("#64748B"))
+            }
+            transactionsContainer.addView(tv)
+            return
+        }
+
+        for (tx in transactions) {
+            val id = (tx["id"] as? Number)?.toLong() ?: 0L
+            val merchant = tx["merchant"] as? String ?: ""
+            val amount = tx["amount"] as? Number ?: 0.0
+            val category = tx["category"] as? String ?: ""
+            val type = tx["type"] as? String ?: "DEBIT"
+            val date = tx["date"] as? String ?: ""
+
+            val itemView = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(12, 12, 12, 12)
+                setBackgroundResource(android.R.drawable.dialog_holo_light_frame)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, 0, 0, 8) }
+            }
+
+            val topRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            val detailsLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            }
+
+            val merchantTv = TextView(this).apply {
+                text = merchant
+                textSize = 14f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(android.graphics.Color.parseColor("#F1F5F9"))
+            }
+
+            val metaTv = TextView(this).apply {
+                text = "$category • ${date.take(10)}"
+                textSize = 12f
+                setTextColor(android.graphics.Color.parseColor("#64748B")
+            }
+
+            val actionLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            }
+
+            val amountTv = TextView(this).apply {
+                text = if (type == "CREDIT") "+₹${"%.2f".format(amount)}" else "₹${"%.2f".format(amount)}"
+                textSize = 14f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(if (type == "CREDIT") android.graphics.Color.parseColor("#4ADE80") else android.graphics.Color.parseColor("#F1F5F9"))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, 0, 12, 0) }
+            }
+
+            val editBtn = Button(this).apply {
+                text = "Edit"
+                textSize = 12sp
+                backgroundTint = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#2563EB"))
+                setTextColor(android.graphics.Color.WHITE)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                setOnClickListener {
+                    showEditDialog(id, merchant, amount, category, type)
+                }
+            }
+
+            detailsLayout.addView(merchantTv)
+            detailsLayout.addView(metaTv)
+
+            actionLayout.addView(amountTv)
+            actionLayout.addView(editBtn)
+
+            topRow.addView(detailsLayout)
+            topRow.addView(actionLayout)
+
+            itemView.addView(topRow)
+            transactionsContainer.addView(itemView)
+        }
+    }
+
+    private fun showEditDialog(id: Long, merchant: String, amount: Double, category: String, type: String) {
+        val dialog = android.app.AlertDialog.Builder(this)
+        val dialogView = layoutInflater.inflate(android.R.layout.simple_list_item_1, null)
+        
+        val editMerchant = EditText(this).apply {
+            setText(merchant)
+            hint = "Merchant"
+        }
+        val editAmount = EditText(this).apply {
+            setText(amount.toString())
+            hint = "Amount"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+        }
+        val editCategory = EditText(this).apply {
+            setText(category)
+            hint = "Category"
+        }
+        val editType = EditText(this).apply {
+            setText(type)
+            hint = "Type (DEBIT/CREDIT)"
+        }
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(32, 16, 32, 16)
+            addView(editMerchant)
+            addView(editAmount)
+            addView(editCategory)
+            addView(editType)
+        }
+
+        dialog.setView(container)
+        dialog.setTitle("Edit Transaction")
+        dialog.setPositiveButton("Save") { _, _ ->
+            updateTransaction(id, editMerchant.text.toString(), editAmount.text.toString(), editCategory.text.toString(), editType.text.toString())
+        }
+        dialog.setNegativeButton("Cancel", null)
+        dialog.show()
+    }
+
+    private fun updateTransaction(id: Long, merchant: String, amount: String, category: String, type: String) {
+        val token = authToken ?: return
+
+        lifecycleScope.launch {
+            try {
+                val amountValue = amount.toDoubleOrNull() ?: 0.0
+                val response = RetrofitClient.apiService.updateTransaction(
+                    id,
+                    mapOf(
+                        "merchant" to merchant,
+                        "amount" to amountValue,
+                        "category" to category,
+                        "type" to type
+                    ),
+                    "Bearer $token"
+                )
+
+                runOnUiThread {
+                    if (response.isSuccessful) {
+                        Toast.makeText(this@MainActivity, "Transaction updated", Toast.LENGTH_SHORT).show()
+                        fetchAllData()
+                    } else {
+                        Toast.makeText(this@MainActivity, "Update failed", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 }

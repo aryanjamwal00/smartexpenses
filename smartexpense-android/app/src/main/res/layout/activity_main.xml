@@ -484,6 +484,96 @@
                     android:padding="10dp"
                     android:visibility="gone" />
             </LinearLayout>
+
+            <!-- Upload Statement Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1E293B"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Upload Bank Statement"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#E2E8F0"
+                    android:layout_marginBottom="12dp" />
+
+                <Button
+                    android:id="@+id/btnUploadPdf"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Select PDF/CSV File"
+                    android:textSize="12sp"
+                    android:backgroundTint="#7C3AED"
+                    android:textColor="#FFFFFF"
+                    android:padding="10dp" />
+
+                <TextView
+                    android:id="@+id/tvSelectedFile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No file selected"
+                    android:textSize="12sp"
+                    android:textColor="#64748B"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/btnProcessFile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Upload & Process"
+                    android:textSize="12sp"
+                    android:backgroundTint="#8B5CF6"
+                    android:textColor="#FFFFFF"
+                    android:padding="10dp"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Recent Transactions Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1E293B"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Recent Transactions"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#E2E8F0"
+                    android:layout_marginBottom="12dp" />
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxHeight="300dp">
+
+                    <LinearLayout
+                        android:id="@+id/transactionsContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Loading transactions..."
+                            android:textSize="12sp"
+                            android:textColor="#64748B" />
+                    </LinearLayout>
+                </ScrollView>
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 </ScrollView>

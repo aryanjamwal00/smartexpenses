@@ -6,6 +6,8 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 data class ParseSmsRequest(
@@ -64,6 +66,18 @@ interface ApiService {
 
     @POST("/api/expenses/manual-entry")
     suspend fun addManualEntry(
+        @Body entry: Map<String, Any>,
+        @Header("Authorization") token: String
+    ): Response<Map<String, Any>>
+
+    @GET("/api/expenses/transactions")
+    suspend fun getTransactions(
+        @Header("Authorization") token: String
+    ): Response<List<Map<String, Any>>>
+
+    @PUT("/api/expenses/update/{id}")
+    suspend fun updateTransaction(
+        @Path("id") id: Long,
         @Body entry: Map<String, Any>,
         @Header("Authorization") token: String
     ): Response<Map<String, Any>>
