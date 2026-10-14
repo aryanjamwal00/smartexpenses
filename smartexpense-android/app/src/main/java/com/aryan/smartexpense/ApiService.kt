@@ -67,4 +67,7 @@ interface ApiService {
         @Body entry: Map<String, Any>,
         @Header("Authorization") token: String
     ): Response<Map<String, Any>>
+
+    @GET("/")
+    suspend fun wakeServer(): Response<Unit>
 }

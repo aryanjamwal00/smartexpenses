@@ -221,47 +221,68 @@ class MainActivity : AppCompatActivity() {
 
         // Show loading indicator
         btnLogin.isEnabled = false
-        btnLogin.text = "Logging in..."
+        btnLogin.text = "Connecting..."
 
         lifecycleScope.launch {
             try {
-                val response = RetrofitClient.apiService.login(mapOf(
-                    "email" to email,
-                    "password" to password
-                ))
+                // First, try to wake up the server
+                try {
+                    RetrofitClient.apiService.wakeServer()
+                } catch (e: Exception) {
+                    // Ignore wake server errors
+                }
 
-                if (response.isSuccessful) {
-                    val data = response.body()
-                    val token = data?.get("token") as? String
-                    val userEmail = data?.get("email") as? String
-                    if (token != null) {
-                        saveAuthToken(token)
-                        saveUserEmail(userEmail ?: email)
-                        authToken = token
-                        runOnUiThread {
-                            Toast.makeText(this@MainActivity, "Login successful", Toast.LENGTH_SHORT).show()
-                            showDashboard()
+                // Wait a moment for server to wake up
+                kotlinx.coroutines.delay(2000)
+
+                // Now try login with retry logic
+                var success = false
+                var lastError: Exception? = null
+
+                repeat(3) { attempt ->
+                    try {
+                        btnLogin.text = "Connecting... (Attempt ${attempt + 1}/3)"
+                        val response = RetrofitClient.apiService.login(mapOf(
+                            "email" to email,
+                            "password" to password
+                        ))
+
+                        if (response.isSuccessful) {
+                            val data = response.body()
+                            val token = data?.get("token") as? String
+                            val userEmail = data?.get("email") as? String
+                            if (token != null) {
+                                saveAuthToken(token)
+                                saveUserEmail(userEmail ?: email)
+                                authToken = token
+                                runOnUiThread {
+                                    Toast.makeText(this@MainActivity, "Login successful", Toast.LENGTH_SHORT).show()
+                                    showDashboard()
+                                }
+                                success = true
+                                return@repeat
+                            }
+                        } else {
+                            val errorBody = response.errorBody()?.string()
+                            lastError = Exception("HTTP ${response.code()}: $errorBody")
                         }
-                    } else {
-                        runOnUiThread {
-                            showError("Invalid response from server")
+                    } catch (e: Exception) {
+                        lastError = e
+                        if (attempt < 2) {
+                            kotlinx.coroutines.delay(3000) // Wait 3 seconds before retry
                         }
                     }
-                } else {
-                    val errorBody = response.errorBody()?.string()
+                }
+
+                if (!success) {
                     runOnUiThread {
-                        showError("Login failed: ${response.code()} - $errorBody")
+                        showError("Login failed after 3 attempts. Please try again.\n${lastError?.message}")
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 runOnUiThread {
-                    val errorMessage = if (e.message?.contains("timeout") == true) {
-                        "Server is waking up. Please wait 30-60 seconds and try again."
-                    } else {
-                        "Error: ${e.javaClass.simpleName} - ${e.message}"
-                    }
-                    showError(errorMessage)
+                    showError("Error: ${e.javaClass.simpleName} - ${e.message}")
                 }
             } finally {
                 runOnUiThread {
@@ -285,49 +306,70 @@ class MainActivity : AppCompatActivity() {
 
         // Show loading indicator
         btnSignup.isEnabled = false
-        btnSignup.text = "Creating account..."
+        btnSignup.text = "Connecting..."
 
         lifecycleScope.launch {
             try {
-                val response = RetrofitClient.apiService.register(mapOf(
-                    "name" to name,
-                    "email" to email,
-                    "phoneNumber" to phone,
-                    "password" to password
-                ))
+                // First, try to wake up the server
+                try {
+                    RetrofitClient.apiService.wakeServer()
+                } catch (e: Exception) {
+                    // Ignore wake server errors
+                }
 
-                if (response.isSuccessful) {
-                    val data = response.body()
-                    val token = data?.get("token") as? String
-                    val userEmail = data?.get("email") as? String
-                    if (token != null) {
-                        saveAuthToken(token)
-                        saveUserEmail(userEmail ?: email)
-                        authToken = token
-                        runOnUiThread {
-                            Toast.makeText(this@MainActivity, "Registration successful", Toast.LENGTH_SHORT).show()
-                            showDashboard()
+                // Wait a moment for server to wake up
+                kotlinx.coroutines.delay(2000)
+
+                // Now try signup with retry logic
+                var success = false
+                var lastError: Exception? = null
+
+                repeat(3) { attempt ->
+                    try {
+                        btnSignup.text = "Connecting... (Attempt ${attempt + 1}/3)"
+                        val response = RetrofitClient.apiService.register(mapOf(
+                            "name" to name,
+                            "email" to email,
+                            "phoneNumber" to phone,
+                            "password" to password
+                        ))
+
+                        if (response.isSuccessful) {
+                            val data = response.body()
+                            val token = data?.get("token") as? String
+                            val userEmail = data?.get("email") as? String
+                            if (token != null) {
+                                saveAuthToken(token)
+                                saveUserEmail(userEmail ?: email)
+                                authToken = token
+                                runOnUiThread {
+                                    Toast.makeText(this@MainActivity, "Registration successful", Toast.LENGTH_SHORT).show()
+                                    showDashboard()
+                                }
+                                success = true
+                                return@repeat
+                            }
+                        } else {
+                            val errorBody = response.errorBody()?.string()
+                            lastError = Exception("HTTP ${response.code()}: $errorBody")
                         }
-                    } else {
-                        runOnUiThread {
-                            showError("Invalid response from server")
+                    } catch (e: Exception) {
+                        lastError = e
+                        if (attempt < 2) {
+                            kotlinx.coroutines.delay(3000) // Wait 3 seconds before retry
                         }
                     }
-                } else {
-                    val errorBody = response.errorBody()?.string()
+                }
+
+                if (!success) {
                     runOnUiThread {
-                        showError("Registration failed: ${response.code()} - $errorBody")
+                        showError("Registration failed after 3 attempts. Please try again.\n${lastError?.message}")
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 runOnUiThread {
-                    val errorMessage = if (e.message?.contains("timeout") == true) {
-                        "Server is waking up. Please wait 30-60 seconds and try again."
-                    } else {
-                        "Error: ${e.javaClass.simpleName} - ${e.message}"
-                    }
-                    showError(errorMessage)
+                    showError("Error: ${e.javaClass.simpleName} - ${e.message}")
                 }
             } finally {
                 runOnUiThread {
