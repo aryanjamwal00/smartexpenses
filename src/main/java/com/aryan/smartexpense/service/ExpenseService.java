@@ -331,7 +331,7 @@ public class ExpenseService {
             txData.put("amount", tx.getAmount());
             txData.put("type", tx.getType().toString());
             txData.put("category", tx.getCategory().getName());
-            txData.put("date", tx.getDate());
+            txData.put("date", tx.getTransactionDate());
             result.add(txData);
         }
         return result;

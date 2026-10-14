@@ -64,11 +64,20 @@ public class Transaction {
     public BigDecimal getAmount() {
         return amount;
     }
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
     public TransactionType getType() {
         return type;
     }
+    public void setType(TransactionType type) {
+        this.type = type;
+    }
     public String getMerchant() {
         return merchant;
+    }
+    public void setMerchant(String merchant) {
+        this.merchant = merchant;
     }
     public Category getCategory() {
         return category;
@@ -85,7 +94,13 @@ public class Transaction {
     public LocalDateTime getTransactionDate() {
         return transactionDate;
     }
+    public void setTransactionDate(LocalDateTime transactionDate) {
+        this.transactionDate = transactionDate;
+    }
     public String getRawMessage() {
         return rawMessage;
+    }
+    public void setRawMessage(String rawMessage) {
+        this.rawMessage = rawMessage;
     }
 }
