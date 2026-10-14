@@ -428,10 +428,6 @@ class MainActivity : AppCompatActivity() {
                 if (response.isSuccessful) {
                     val cats = response.body() as? List<*>
                     categories = cats?.mapNotNull { (it as? Map<*, *>)?.get("name") as? String } ?: emptyList()
-
-                    val adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, listOf("Auto-detect category") + categories)
-                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                    spinnerCategory.adapter = adapter
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, "Error fetching categories: ${e.message}", Toast.LENGTH_SHORT).show()
