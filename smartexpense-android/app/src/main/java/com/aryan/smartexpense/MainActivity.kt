@@ -726,6 +726,7 @@ class MainActivity : AppCompatActivity() {
         val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
             type = "*/*"
             addCategory(Intent.CATEGORY_OPENABLE)
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/pdf", "text/csv", "application/vnd.ms-excel"))
         }
         startActivityForResult(intent, FILE_PICK_CODE)
     }
@@ -734,11 +735,26 @@ class MainActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == FILE_PICK_CODE && resultCode == RESULT_OK) {
             data?.data?.let { uri ->
-                selectedFileUri = uri
                 val fileName = getFileName(uri)
+                val fileNameLower = fileName.lowercase()
+
+                // Validate file type
+                if (!fileNameLower.endsWith(".pdf") && !fileNameLower.endsWith(".csv")) {
+                    Toast.makeText(this, "Invalid file type. Please select a PDF or CSV bank statement.", Toast.LENGTH_LONG).show()
+                    return
+                }
+
+                selectedFileUri = uri
                 tvSelectedFile.text = fileName
                 tvSelectedFile.visibility = View.VISIBLE
-                etStatementPassword.visibility = View.VISIBLE
+
+                // Show password field only for PDF files
+                if (fileNameLower.endsWith(".pdf")) {
+                    etStatementPassword.visibility = View.VISIBLE
+                } else {
+                    etStatementPassword.visibility = View.GONE
+                }
+
                 btnProcessFile.visibility = View.VISIBLE
             }
         }

@@ -117,6 +117,7 @@
     <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
         <h2 class="text-sm font-semibold text-slate-200">Import Bank Statement</h2>
         <input type="file" id="statementFile" accept=".pdf,.csv" class="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-600/20 file:text-blue-400 hover:file:bg-blue-600/30">
+        <p class="text-xs text-slate-500">Supported formats: PDF, CSV</p>
         <input type="password" id="statementPassword" placeholder="PDF Password (if required)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
         <button onclick="uploadStatement()" class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[0.98] transition font-medium text-xs py-2.5 rounded-xl text-slate-100">
             Upload & Process
@@ -469,11 +470,19 @@
         }
 
         const file = fileInput.files[0];
+        const fileName = file.name.toLowerCase();
+
+        // Validate file type
+        if (!fileName.endsWith('.pdf') && !fileName.endsWith('.csv')) {
+            alert('Invalid file type. Please upload a PDF or CSV bank statement file.');
+            return;
+        }
+
         const formData = new FormData();
         formData.append('file', file);
 
         let url = '/api/expenses/upload-csv';
-        if (file.name.toLowerCase().endsWith('.pdf')) {
+        if (fileName.endsWith('.pdf')) {
             url = '/api/expenses/upload-pdf';
             if (password) formData.append('password', password);
         }
