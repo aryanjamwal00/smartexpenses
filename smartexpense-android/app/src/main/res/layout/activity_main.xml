@@ -527,7 +527,7 @@
                     android:id="@+id/btnProcessFile"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Upload & Process"
+                    android:text="Upload &amp; Process"
                     android:textSize="12sp"
                     android:backgroundTint="#8B5CF6"
                     android:textColor="#FFFFFF"
