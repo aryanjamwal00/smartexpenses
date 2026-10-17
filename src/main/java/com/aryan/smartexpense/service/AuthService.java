@@ -24,7 +24,9 @@ public class AuthService {
     }
 
     public Map<String, Object> register(String email, String password, String name, String phoneNumber) {
-        if (userRepository.existsByEmail(email)) {
+        email = normalizeEmail(email);
+        phoneNumber = normalizePhone(phoneNumber);
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new IllegalArgumentException("Email already registered");
         }
 
@@ -53,7 +55,8 @@ public class AuthService {
     }
 
     public Map<String, Object> login(String email, String password) {
-        Optional<User> userOptional = userRepository.findByEmail(email);
+        email = normalizeEmail(email);
+        Optional<User> userOptional = userRepository.findByEmailIgnoreCase(email);
         if (userOptional.isEmpty()) {
             throw new IllegalArgumentException("Invalid email or password");
         }
@@ -71,5 +74,15 @@ public class AuthService {
         response.put("email", user.getEmail());
         response.put("name", user.getName());
         return response;
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private String normalizePhone(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.isBlank()) return phoneNumber;
+        String normalized = phoneNumber.replaceAll("[^0-9]", "");
+        return normalized.isEmpty() ? null : normalized;
     }
 }

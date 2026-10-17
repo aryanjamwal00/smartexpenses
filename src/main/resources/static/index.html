@@ -63,6 +63,7 @@
             </button>
         </div>
     </header>
+    <p id="dashboardStatus" class="text-xs text-slate-400 hidden" role="status" aria-live="polite"></p>
 
     <!-- Monthly Summary Card -->
     <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm relative">
@@ -234,7 +235,7 @@
         }
 
         try {
-            const res = await fetch('/api/auth/login', {
+            const res = await fetchWithWakeRetry('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -271,7 +272,7 @@
         }
 
         try {
-            const res = await fetch('/api/auth/register', {
+            const res = await fetchWithWakeRetry('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email, phoneNumber: phone, password })
@@ -332,11 +333,38 @@
         }
     }
 
+    async function fetchWithWakeRetry(url, options = {}) {
+        let lastError;
+        for (let attempt = 0; attempt < 4; attempt++) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 90000);
+            try {
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                if (![502, 503, 504].includes(response.status) || attempt === 3) return response;
+                lastError = new Error(`Backend is waking up (${response.status})`);
+            } catch (error) {
+                lastError = error;
+                if (attempt === 3) break;
+            } finally {
+                clearTimeout(timeout);
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000 * (2 ** attempt)));
+        }
+        throw new Error('The server is taking too long to respond. Please try again in a moment.');
+    }
+
     // Authenticated fetch wrapper
     async function authFetch(url, options = {}) {
-        if (!options.headers) options.headers = {};
-        options.headers['Authorization'] = `Bearer ${authToken}`;
-        return fetch(url, options);
+        const headers = new Headers(options.headers || {});
+        headers.set('Authorization', `Bearer ${authToken}`);
+        const response = await fetchWithWakeRetry(url, { ...options, headers });
+        if (response.status === 401) {
+            logout();
+            const errorEl = document.getElementById('authError');
+            errorEl.textContent = 'Your session expired. Please log in again.';
+            errorEl.classList.remove('hidden');
+        }
+        return response;
     }
 
     const currentDate = new Date();
@@ -504,11 +532,21 @@
         }
     }
 
-    function fetchAllData() {
-        fetchReport();
-        fetchHistory();
-        fetchCategories();
-        fetchTransactions();
+    async function fetchAllData() {
+        if (!authToken) return;
+        const status = document.getElementById('dashboardStatus');
+        status.textContent = 'Connecting to your account…';
+        status.classList.remove('hidden');
+        try {
+            const session = await authFetch('/api/expenses/me');
+            if (!session.ok) throw new Error('Could not load your account. Please refresh to try again.');
+            await Promise.all([fetchReport(), fetchHistory(), fetchCategories(), fetchTransactions()]);
+            status.textContent = '';
+            status.classList.add('hidden');
+        } catch (error) {
+            status.textContent = error.message || 'Unable to connect. Please tap Refresh to try again.';
+            status.classList.remove('hidden');
+        }
     }
 
     async function fetchCategories() {
@@ -646,7 +684,9 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: smsText })
             });
-            const data = await res.json();
+            const responseBody = await res.text();
+            let data;
+            try { data = JSON.parse(responseBody); } catch { data = responseBody; }
 
             if (res.ok) {
                 parsedExpenseData = {
@@ -664,7 +704,8 @@
                 document.getElementById('parsedResult').classList.remove('hidden');
                 document.getElementById('btnAddParsedEntry').classList.remove('hidden');
             } else {
-                alert('Failed to parse SMS');
+                const message = typeof data === 'string' ? data : (data.message || 'Only debit or credit transaction SMS can be imported.');
+                alert('SMS not imported: ' + message);
             }
         } catch (e) {
             alert('Error parsing SMS: ' + e.message);

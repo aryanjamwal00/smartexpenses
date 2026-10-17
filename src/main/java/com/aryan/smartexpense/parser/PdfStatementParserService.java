@@ -27,7 +27,22 @@ public class PdfStatementParserService {
 
     // Matches currency amounts like 45.00, 4,365.00, 12,500.00
     private static final Pattern AMOUNT_PATTERN = Pattern.compile(
-            "\\b([0-9]{1,3}(?:,[0-9]{2,3})*\\.\\d{2})\\b"
+            "\\b([0-9]+(?:,[0-9]{2,3})*\\.\\d{2})\\b"
+    );
+    private static final Pattern CREDIT_PATTERN = Pattern.compile(
+            "\\b(?:CR|CREDIT|CREDITED|RECEIVED|DEPOSITED|REFUND(?:ED)?|CASHBACK|" +
+                    "TRANSFER(?:RED)? FROM|UPI FROM|NEFT\\s*CR|IMPS\\s*CR|RTGS\\s*CR)\\b",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern DEBIT_PATTERN = Pattern.compile(
+            "\\b(?:DR|DEBIT|DEBITED|PAID|PURCHASE|WITHDRAWN?|SENT TO|TRANSFER(?:RED)? TO|" +
+                    "UPI TO|NEFT\\s*DR|IMPS\\s*DR|RTGS\\s*DR)\\b",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern ACTIVITY_PATTERN = Pattern.compile(
+            "\\b(?:UPI|NEFT|IMPS|RTGS|TRANSFER(?:RED)?|RECEIVED|CREDITED|DEBITED|DEPOSITED|" +
+                    "REFUND(?:ED)?|CASHBACK|PURCHASE|PAID|WITHDRAWN?|SENT TO)\\b",
+            Pattern.CASE_INSENSITIVE
     );
 
     public List<CsvStatementParserService.CsvTransactionRow> parse(MultipartFile file, String password) throws IOException {
@@ -47,7 +62,7 @@ public class PdfStatementParserService {
 
             for (String rawLine : lines) {
                 String line = rawLine.trim();
-                if (line.isEmpty() || line.startsWith("#") || line.contains("Account Statement") || line.contains("Balance")) {
+                if (line.isEmpty() || line.startsWith("#") || line.toLowerCase().contains("account statement")) {
                     continue;
                 }
 
@@ -55,6 +70,11 @@ public class PdfStatementParserService {
                 Matcher dateMatcher = DATE_PATTERN.matcher(line);
                 if (dateMatcher.find()) {
                     currentDate = dateMatcher.group(1);
+                }
+
+                if (line.toLowerCase().contains("balance")
+                        && !ACTIVITY_PATTERN.matcher(line).find()) {
+                    continue;
                 }
 
                 // Find amounts on the line
@@ -75,12 +95,10 @@ public class PdfStatementParserService {
 
                     if (txAmount.compareTo(BigDecimal.ZERO) > 0) {
                         // Classify Credit vs Debit based on common indicators
-                        TransactionType type = (line.toUpperCase().contains("CR")
-                                || line.toUpperCase().contains("CASHBACK")
-                                || line.toUpperCase().contains("REFUND")
-                                || line.toUpperCase().contains("INT. PD"))
-                                ? TransactionType.CREDIT
-                                : TransactionType.DEBIT;
+                        boolean credit = CREDIT_PATTERN.matcher(line).find();
+                        boolean debit = DEBIT_PATTERN.matcher(line).find();
+                        if (!credit && !debit) continue;
+                        TransactionType type = credit ? TransactionType.CREDIT : TransactionType.DEBIT;
 
                         String desc = line.replaceAll("[0-9,]+\\.\\d{2}", "").replaceAll(DATE_PATTERN.pattern(), "").trim();
                         if (desc.isEmpty()) desc = "BANK_TXN";

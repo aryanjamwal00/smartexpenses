@@ -76,7 +76,8 @@ public class ExpenseController {
         try {
             return ResponseEntity.ok(expenseService.processSms(sms));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(409).body(e.getMessage());
+            int status = e.getMessage() != null && e.getMessage().startsWith("Duplicate") ? 409 : 400;
+            return ResponseEntity.status(status).body(e.getMessage());
         }
     }
 
@@ -260,11 +261,10 @@ public class ExpenseController {
                 "data", result
             ));
         } catch (IllegalArgumentException e) {
-            // Duplicate transaction - return success to prevent webhook retries
-            return ResponseEntity.ok(Map.of(
-                "status", "duplicate",
-                "message", e.getMessage()
-            ));
+            if (e.getMessage() != null && e.getMessage().startsWith("Duplicate")) {
+                return ResponseEntity.ok(Map.of("status", "duplicate", "message", e.getMessage()));
+            }
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Failed to process SMS: " + e.getMessage());
         }

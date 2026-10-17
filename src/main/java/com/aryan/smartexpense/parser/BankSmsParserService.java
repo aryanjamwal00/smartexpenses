@@ -16,7 +16,23 @@ public class BankSmsParserService {
 
     // Regex to capture amounts like Rs. 450, INR 1,299.50, Rs 500.00
     private static final Pattern AMOUNT_PATTERN = Pattern.compile(
-            "(?:(?:RS|INR|Rs\\.|INR\\.)\\s*([0-9,]+(?:\\.[0-9]{1,2})?))",
+            "(?:(?:₹|RS\\.?|INR\\.?)\\s*([0-9,]+(?:\\.[0-9]{1,2})?))",
+            Pattern.CASE_INSENSITIVE
+    );
+
+    private static final Pattern OTP_PATTERN = Pattern.compile(
+            "\\b(?:otp|verification|verify|one[ -]?time|onetime|2fa|mfa|pin|password|auth|authenticate|" +
+                    "login|sign in|security|secure|expiry|expire|validity|valid for|confirm|code)\\b",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern CREDIT_PATTERN = Pattern.compile(
+            "\\b(?:credited|received|deposited|refund(?:ed)?|cashback|reversed|" +
+                    "transfer(?:red)? from|received from|upi from|neft\\s*cr|imps\\s*cr|rtgs\\s*cr)\\b",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern DEBIT_PATTERN = Pattern.compile(
+            "\\b(?:debited|debit|spent|paid|purchase|withdrawn?|sent to|transfer(?:red)? to|" +
+                    "upi to|neft\\s*dr|imps\\s*dr|rtgs\\s*dr)\\b",
             Pattern.CASE_INSENSITIVE
     );
 
@@ -47,7 +63,14 @@ public class BankSmsParserService {
     }
 
     public ParsedData parse(String smsText) {
+        if (smsText == null || smsText.isBlank()) {
+            throw new IllegalArgumentException("SMS is empty");
+        }
         String cleanSms = smsText.trim();
+
+        if (OTP_PATTERN.matcher(cleanSms).find()) {
+            throw new IllegalArgumentException("OTP and verification messages are not accepted");
+        }
 
         // 1. Extract Amount
         Matcher amountMatcher = AMOUNT_PATTERN.matcher(cleanSms);
@@ -58,11 +81,13 @@ public class BankSmsParserService {
         }
 
         // 2. Identify Type (Debit vs Credit)
-        TransactionType type = TransactionType.DEBIT;
-        String lower = cleanSms.toLowerCase(Locale.ROOT);
-        if (lower.contains("credited") || lower.contains("deposited") || lower.contains("received")) {
-            type = TransactionType.CREDIT;
+        boolean credit = CREDIT_PATTERN.matcher(cleanSms).find();
+        boolean debit = DEBIT_PATTERN.matcher(cleanSms).find();
+        if (amount.compareTo(BigDecimal.ZERO) <= 0 || (!credit && !debit)) {
+            throw new IllegalArgumentException("Only SMS messages for debit or credit transactions are accepted");
         }
+        // Incoming funds, refunds, and cashback always belong in CREDIT.
+        TransactionType type = credit ? TransactionType.CREDIT : TransactionType.DEBIT;
 
         // 3. Extract Merchant Name
         String merchant = "UNKNOWN";
