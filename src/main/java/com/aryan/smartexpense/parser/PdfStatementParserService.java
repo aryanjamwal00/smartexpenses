@@ -59,6 +59,7 @@ public class PdfStatementParserService {
 
             String[] lines = fullText.split("\\r?\\n");
             String currentDate = null;
+            BigDecimal previousBalance = null;
 
             for (String rawLine : lines) {
                 String line = rawLine.trim();
@@ -72,33 +73,46 @@ public class PdfStatementParserService {
                     currentDate = dateMatcher.group(1);
                 }
 
-                if (line.toLowerCase().contains("balance")
-                        && !ACTIVITY_PATTERN.matcher(line).find()) {
-                    continue;
-                }
-
-                // Find amounts on the line
                 Matcher amountMatcher = AMOUNT_PATTERN.matcher(line);
                 List<String> amounts = new ArrayList<>();
                 while (amountMatcher.find()) {
                     amounts.add(amountMatcher.group(1));
                 }
 
+                // Use the opening balance as a baseline when a statement omits explicit Dr/Cr labels.
+                if (line.toLowerCase().contains("opening balance") && !amounts.isEmpty()) {
+                    previousBalance = parseAmount(amounts.get(amounts.size() - 1));
+                    continue;
+                }
+
+                if (line.toLowerCase().contains("balance")
+                        && !ACTIVITY_PATTERN.matcher(line).find()) {
+                    continue;
+                }
+
                 // Kotak format: usually [Transaction Amount, Running Balance]
                 if (!amounts.isEmpty() && currentDate != null) {
-                    BigDecimal txAmount;
-                    if (amounts.size() >= 2) {
-                        txAmount = new BigDecimal(amounts.get(amounts.size() - 2).replace(",", ""));
-                    } else {
-                        txAmount = new BigDecimal(amounts.get(0).replace(",", ""));
-                    }
+                    // The last currency value is the running balance; preceding value is the transaction amount.
+                    if (amounts.size() < 2) continue;
+                    BigDecimal txAmount = parseAmount(amounts.get(amounts.size() - 2));
+                    BigDecimal currentBalance = parseAmount(amounts.get(amounts.size() - 1));
 
                     if (txAmount.compareTo(BigDecimal.ZERO) > 0) {
-                        // Classify Credit vs Debit based on common indicators
+                        // Prefer explicit indicators, then infer direction from the running balance change.
                         boolean credit = CREDIT_PATTERN.matcher(line).find();
                         boolean debit = DEBIT_PATTERN.matcher(line).find();
-                        if (!credit && !debit) continue;
-                        TransactionType type = credit ? TransactionType.CREDIT : TransactionType.DEBIT;
+                        TransactionType type;
+                        if (credit) {
+                            type = TransactionType.CREDIT;
+                        } else if (debit) {
+                            type = TransactionType.DEBIT;
+                        } else if (previousBalance != null && currentBalance.compareTo(previousBalance) != 0) {
+                            type = currentBalance.compareTo(previousBalance) > 0
+                                    ? TransactionType.CREDIT : TransactionType.DEBIT;
+                        } else {
+                            previousBalance = currentBalance;
+                            continue;
+                        }
 
                         String desc = line.replaceAll("[0-9,]+\\.\\d{2}", "").replaceAll(DATE_PATTERN.pattern(), "").trim();
                         if (desc.isEmpty()) desc = "BANK_TXN";
@@ -106,10 +120,15 @@ public class PdfStatementParserService {
                         String hash = generateSha256(currentDate + "_" + desc + "_" + txAmount + "_" + type);
                         rows.add(new CsvStatementParserService.CsvTransactionRow(desc, txAmount, type, hash));
                     }
+                    previousBalance = currentBalance;
                 }
             }
         }
         return rows;
+    }
+
+    private BigDecimal parseAmount(String value) {
+        return new BigDecimal(value.replace(",", ""));
     }
 
     private String generateSha256(String input) {
